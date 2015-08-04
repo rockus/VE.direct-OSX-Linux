@@ -321,7 +321,7 @@ int readSerialData (int fileDescriptor, int bCont)
     printf ("\x1b[2J\x1b[1;1H");	// clear screen
 
     printf ("\033[2;3H");		// move cursor to line 2, col 3
-    printf ("MPPTDUMP (c)2015 Oliver Gerler (rockus@rockus.at)");
+    printf ("MPPTDUMP %s (c)2015 Oliver Gerler (rockus@rockus.at)", VERSION);
 
     printf ("\n\n  date: ");
     time_t mytime; mytime = time(NULL); printf("%s", ctime(&mytime));

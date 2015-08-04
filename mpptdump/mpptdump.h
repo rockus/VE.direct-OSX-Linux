@@ -12,6 +12,8 @@
 #include <time.h>	// for ctime, time
 #include <signal.h>	// for sigaction
 
+#define VERSION "v1.00"
+
 static int openSerialPort(const char *bsdPath);static int openSerialPort(const char *bsdPath);
 static int readSerialData (int fileDescriptor, int bCont);
 static void closeSerialPort(int fileDescriptor);
