@@ -3,9 +3,10 @@
 
 CC = gcc
 CFLAGS = -I.
+LIBS =
 
 mpptdump: mpptdump.c
-	$(CC) -o $@ $^ $(CFLAGS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
 #######
 

@@ -9,10 +9,15 @@
 #include <termios.h>	// for struct termios, tcgetattr, cfmakeraw, cfsetspeed, tcsetattr, VMIN, VTIMES, CSB, tcdrain
 #include <sysexits.h>	// for EX_IOERR, EX_OK
 #include <sys/param.h>	// for MAXPATHLEN
+#include <time.h>	// for ctime, time
+#include <signal.h>	// for sigaction
 
 static int openSerialPort(const char *bsdPath);static int openSerialPort(const char *bsdPath);
-static int readSerialData (int fileDescriptor);
+static int readSerialData (int fileDescriptor, int bCont);
 static void closeSerialPort(int fileDescriptor);
+
+// keep running until user hits Ctrl-C (also obviously works if only one frame to be printed)
+volatile int keepRunning = 1;
 
 // Hold the original termios attributes so we can reset them
 static struct termios gOriginalTTYAttrs;
@@ -38,15 +43,25 @@ struct mppt {
 	int hsds;		// daty sequence number			fw v1.16
 } mppt;
 
+void intHandler(int sig) {
+    keepRunning = 0;
+}
+
 int main(int argc, char **argv)
 {
     char	deviceFilePath[MAXPATHLEN];
     int		fileDescriptor;
     int		c;
+    int		bCont;	// flag for continuous operation
+    struct sigaction act;
+
+    act.sa_handler = intHandler;
+    sigaction(SIGINT, &act, NULL);	// catch Ctrl-C
 
     opterr = 0;
-    while ((c=getopt(argc, argv, "d:")) != -1) {
+    while ((c=getopt(argc, argv, "cd:")) != -1) {
 	switch (c) {
+	    case 'c': bCont = 1; break;
 	    case 'd': strcpy(deviceFilePath, optarg); break;
 	    case '?': if (optopt=='d')
 			fprintf(stderr, "Option -%c requires an argument.\n", optopt);
@@ -73,7 +88,7 @@ int main(int argc, char **argv)
         return EX_IOERR;
     }
 
-    if (!(readSerialData(fileDescriptor))) {
+    if (!(readSerialData(fileDescriptor, bCont))) {
         printf("Could not read data.\n");
     }
 
@@ -273,7 +288,7 @@ void closeSerialPort(int fileDescriptor)
 }
 
 // Read from serial port
-int readSerialData (int fileDescriptor)
+int readSerialData (int fileDescriptor, int bCont)
 {
     char	buffer[256];
     char	*bufPtr;
@@ -281,11 +296,16 @@ int readSerialData (int fileDescriptor)
     char	*valuePtr;
     int		found;
     int		checksum_line, checksum;
-    int 	i, j;
+    int 	nParams, nFrames, nFramesOk, i, j, iMax;
 
-    printf ("\n");
+    nFrames = 0;
 
-    for (i=0; i<17; i++)
+//  iMax=1; if (bCont) {iMax=10;}
+//  for (i=0; i<iMax; i++)
+  do
+  {
+
+    for (nParams=0; nParams<17; nParams++)
     {
 	bufPtr = buffer;	// init bufPtr, i.e. flush buffer
 	found = 0;
@@ -313,7 +333,7 @@ int readSerialData (int fileDescriptor)
 		valuePtr++;					// point to after delimiter for 'value'
 
 
-		if (!(strncmp(buffer,"PID",3))) {mppt.pid = strtol(valuePtr, NULL, 0);found=1; i=1; checksum=checksum_line;}
+		if (!(strncmp(buffer,"PID",3))) {mppt.pid = strtol(valuePtr, NULL, 0);found=1; nParams=1; checksum=checksum_line; nFrames++;}
 		if (!(strncmp(buffer,"FW", 2))) {mppt.fw = strtod(valuePtr, NULL); found=1; checksum += checksum_line;}
 		if (!(strncmp(buffer,"SER#", 4))) {strncpy(mppt.ser, valuePtr, 16); found=1; checksum += checksum_line;}
 		if (!(strcmp(buffer,"V"))) {mppt.v = strtod(valuePtr, NULL); found=1; checksum += checksum_line;}
@@ -335,84 +355,118 @@ int readSerialData (int fileDescriptor)
 
 //		if (!found) {printf("undefined field: %s:%s\n", buffer, valuePtr);}	// buffer == key	// print undefined keys
 
-//		if (found) printf ("%d:%02x:%02x\n", i, checksum_line, checksum);
-		if (i>=16 && checksum&0xff && mppt.ser[0]=='\0') {i=1;}	// repeat if checksum != 0 and no ser number;
-
+//		if (found) printf ("%d:%02x:%02x\n", nParams, checksum_line, checksum);
+		if (nParams>=16 && checksum&0xff && mppt.ser[0]=='\0') {nParams=1;}	// repeat if checksum != 0 and no ser number;
 	    }
 	}
     }
 
+    printf ("\x1b[2J\x1b[1;1H");	// clear screen
+
+    printf ("\033[2;3H");		// move cursor to line 2, col 3
+    printf ("MPPTDUMP (c)2015 Oliver Gerler (rockus@rockus.at)");
+
+    printf ("\n\n  date: ");
+    time_t mytime; mytime = time(NULL); printf("%s", ctime(&mytime));
+
+    printf ("  frame: %d\n\n", nFrames);
+
+    printf ("charger:\n");
 //    printf ("pid : 0x%04X\n", mppt.pid);
     switch (mppt.pid) {
-	case 0x300: printf ("type: MPPT 70/15 (PID 0x300)\n");break;
-	case 0xa042: printf ("type: MPPT 75/15 (PID 0xA042)\n");break;
-	case 0xa043: printf ("type: MPPT 100/15 (PID 0xA043)\n");break;
-	case 0xa044: printf ("type: MPPT 100/30 (PID 0xA044)\n");break;
-	case 0xa041: printf ("type: MPPT 150/35 (PID 0xA041)\n");break;
-	case 0xa040: printf ("type: MPPT 75/50 (PID 0xA040)\n");break;
-	case 0xa045: printf ("type: MPPT 100/50 (PID 0xA045)\n");break;
-	default: printf ("type: *UNKNOWN*\n");break;
+	case 0x300: printf ("  type: MPPT 70/15 (PID 0x300)\n");break;
+	case 0xa042: printf ("  type: MPPT 75/15 (PID 0xA042)\n");break;
+	case 0xa043: printf ("  type: MPPT 100/15 (PID 0xA043)\n");break;
+	case 0xa044: printf ("  type: MPPT 100/30 (PID 0xA044)\n");break;
+	case 0xa041: printf ("  type: MPPT 150/35 (PID 0xA041)\n");break;
+	case 0xa040: printf ("  type: MPPT 75/50 (PID 0xA040)\n");break;
+	case 0xa045: printf ("  type: MPPT 100/50 (PID 0xA045)\n");break;
+	default: printf ("  type: *UNKNOWN*\n");break;
     }
-    printf ("fw  : v%4.2f\n", 1.0*mppt.fw/100);
-    printf ("ser : %s\n", mppt.ser);
-    printf ("v   : %6.3fV\n", 1.0*mppt.v/1000);
-    printf ("i   : %6.3fA\n", 1.0*mppt.i/1000);
-    if (mppt.fw >= 115) {
-	printf ("il  : %6.3fA\n", 1.0*mppt.il/1000);
-    }
-    printf ("vpv : %6.3fV\n", 1.0*mppt.vpv/1000);
-    printf ("ppv : % 3dW\n", mppt.ppv);
+    printf ("  fw  : v%4.2f\n", 1.0*mppt.fw/100);
+    printf ("  ser : %s\n", mppt.ser);
 
+    printf ("panel:\n");
+    printf ("  vpv : %6.3fV\n", 1.0*mppt.vpv/1000);
+    printf (" [ipv : %6.3fA (parameter calculated externally)]\n", 1.0*mppt.ppv/mppt.vpv*1000);
+    printf ("  ppv : % 3dW\n", mppt.ppv);
+
+    printf ("battery:\n");
+    printf ("  v   : %6.3fV\n", 1.0*mppt.v/1000);
+    printf ("  i   : %6.3fA\n", 1.0*mppt.i/1000);
+
+    printf (" [p   : %6.3fW (parameter calculated externally)]\n", 1.0*mppt.v/1000*mppt.i/1000);
+
+    printf ("load:\n");
+    printf (" [v   : %6.3fV (same voltage as battery)]\n", 1.0*mppt.v/1000);
+    if (mppt.fw >= 115) {
+	printf ("  il  : %6.3fA\n", 1.0*mppt.il/1000);
+	printf (" [pl  : %6.3fW\n (parameter calculated externally)]", 1.0*mppt.v/1000*mppt.il/1000);
+    }
+    else {
+        printf ("  il  : --.--- (parameter only in fw >= v1.15)\n");
+        printf (" [pl  : --.--- (parameter calculated externally, if fw >= v1.15)]\n");
+    }
+
+    printf ("charger status:\n");
 //    printf ("cs  : %d\n", mppt.cs);
     switch(mppt.cs) {
-	case 0: printf ("cs  : Off\n"); break;
-	case 2: printf ("cs  : Fault\n"); break;
-	case 3: printf ("cs  : Bulk\n"); break;
-	case 4: printf ("cs  : Absorption\n"); break;
-	case 5: printf ("cs  : Float\n"); break;
-	default: printf ("cs  : *UNKNOWN*\n"); break;
+	case 0: printf ("  cs  : Off\n"); break;
+	case 2: printf ("  cs  : Fault\n"); break;
+	case 3: printf ("  cs  : Bulk\n"); break;
+	case 4: printf ("  cs  : Absorption\n"); break;
+	case 5: printf ("  cs  : Float\n"); break;
+	default: printf ("  cs  : *UNKNOWN*\n"); break;
     }
 
 //    printf ("err : %d\n", mppt.err);
     switch (mppt.err) {
-	case 0: printf ("err : No error\n");break;
-	case 1: printf ("err : Battery temperature too high\n");break;
-	case 2: printf ("err : Battery voltage too high\n");break;
-	case 17: printf ("err : Charger temperature too high\n");break;
-	case 18: printf ("err : Charger over current\n");break;
-	case 19: printf ("err : Charger current reversed\n");break;
-	case 20: printf ("err : Bulk time limit exceeded\n");break;
-	case 21: printf ("err : Current sensor issue\n");break;
-	case 26: printf ("err : Terminals overheated\n");break;
-	case 33: printf ("err : Input voltage too high (solar panel)\n");break;
-	case 34: printf ("err : Input current too high (solar panel)\n");break;
-	case 38: printf ("err : Input shutdown (due to excessive battery voltage)\n");break;
-	case 116: printf ("err : factory calibration data lost\n");break;
-	case 117: printf ("err : invalid/incompatible firmware\n");break;
-	case 119: printf ("err : User settings invalid\n");break;
-	default: printf ("err : *UNKNOWN\n");break;
+	case 0: printf ("  err : No error\n");break;
+	case 1: printf ("  err : Battery temperature too high\n");break;
+	case 2: printf ("  err : Battery voltage too high\n");break;
+	case 17: printf ("  err : Charger temperature too high\n");break;
+	case 18: printf ("  err : Charger over current\n");break;
+	case 19: printf ("  err : Charger current reversed\n");break;
+	case 20: printf ("  err : Bulk time limit exceeded\n");break;
+	case 21: printf ("  err : Current sensor issue\n");break;
+	case 26: printf ("  err : Terminals overheated\n");break;
+	case 33: printf ("  err : Input voltage too high (solar panel)\n");break;
+	case 34: printf ("  err : Input current too high (solar panel)\n");break;
+	case 38: printf ("  err : Input shutdown (due to excessive battery voltage)\n");break;
+	case 116: printf ("  err : factory calibration data lost\n");break;
+	case 117: printf ("  err : invalid/incompatible firmware\n");break;
+	case 119: printf ("  err : User settings invalid\n");break;
+	default: printf ("  err : *UNKNOWN\n");break;
     }
 
     if (mppt.fw >= 112) {
 //        printf ("load: %d\n", mppt.load);
 	switch(mppt.load) {
-	    case 0: printf ("load: off\n");break;
-	    case 1: printf ("load: on\n");break;
-	    default: printf ("load: *UNKNOWN*\n");break;
+	    case 0: printf ("  load: off\n");break;
+	    case 1: printf ("  load: on\n");break;
+	    default: printf ("  load: *UNKNOWN*\n");break;
 	}
     }
+    else {
+        printf ("  il  : --- (parameter only in fw >= v1.12)\n");
+    }
 
-    printf ("yield total         : %6.2fkWh\n", 1.0*mppt.yield_total/100);
-    printf ("yield today         : %6.2fkWh\n", 1.0*mppt.yield_today/100);
-    printf ("yield yesterday     : %6.2fkWh\n", 1.0*mppt.yield_yesterday/100);
-    printf ("max. power today    : % 4dW\n", mppt.maxpower_today);
-    printf ("max. power yesterday: % 4dW\n", mppt.maxpower_yesterday);
+    printf ("  yield total         : %6.2fkWh\n", 1.0*mppt.yield_total/100);
+    printf ("  yield today         : %6.2fkWh [%6.2fAh @ 13V nom.]\n", 1.0*mppt.yield_today/100, 1.0*mppt.yield_today/100*1000/13);
+    printf ("  yield yesterday     : %6.2fkWh\n", 1.0*mppt.yield_yesterday/100);
+    printf ("  max. power today    : % 4dW\n", mppt.maxpower_today);
+    printf ("  max. power yesterday: % 4dW\n", mppt.maxpower_yesterday);
 
     if (mppt.fw >= 116) {
-	printf ("hshs: %d\n", mppt.hsds);
+	printf ("  hsds: %d\n", mppt.hsds);
+    }
+    else {
+        printf ("  hsds: --- (parameter only in fw >= v1.16)\n");
     }
 
     printf ("\n");
+  }
+  while (keepRunning && bCont);
 
     return 1;	// 0 - fail; 1 - success
 }
