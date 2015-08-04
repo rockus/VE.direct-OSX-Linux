@@ -323,7 +323,7 @@ int readSerialData (int fileDescriptor, int bCont)
     printf ("\033[2;3H");		// move cursor to line 2, col 3
     printf ("MPPTDUMP %s (c)2015 Oliver Gerler (rockus@rockus.at)", VERSION);
 
-    printf ("\n\n  date: ");
+    printf ("\n\n  date : ");
     time_t mytime; mytime = time(NULL); printf("%s", ctime(&mytime));
 
     printf ("  frame: %d\n\n", nFrames);
@@ -345,24 +345,24 @@ int readSerialData (int fileDescriptor, int bCont)
 
     printf ("panel:\n");
     printf ("  vpv : %6.3fV\n", 1.0*mppt.vpv/1000);
-    printf (" [ipv : %6.3fA (parameter calculated externally)]\n", 1.0*mppt.ppv/mppt.vpv*1000);
+    printf (" [ipv : %6.3fA]\n", 1.0*mppt.ppv/mppt.vpv*1000);
     printf ("  ppv : % 3dW\n", mppt.ppv);
 
     printf ("battery:\n");
     printf ("  v   : %6.3fV\n", 1.0*mppt.v/1000);
     printf ("  i   : %6.3fA\n", 1.0*mppt.i/1000);
 
-    printf (" [p   : %6.3fW (parameter calculated externally)]\n", 1.0*mppt.v/1000*mppt.i/1000);
+    printf (" [p   : %6.3fW]\n", 1.0*mppt.v/1000*mppt.i/1000);
 
     printf ("load:\n");
     printf (" [v   : %6.3fV (same voltage as battery)]\n", 1.0*mppt.v/1000);
     if (mppt.fw >= 115) {
 	printf ("  il  : %6.3fA\n", 1.0*mppt.il/1000);
-	printf (" [pl  : %6.3fW\n (parameter calculated externally)]", 1.0*mppt.v/1000*mppt.il/1000);
+	printf (" [pl  : %6.3fW\n]", 1.0*mppt.v/1000*mppt.il/1000);
     }
     else {
         printf ("  il  : --.--- (parameter only in fw >= v1.15)\n");
-        printf (" [pl  : --.--- (parameter calculated externally, if fw >= v1.15)]\n");
+        printf (" [pl  : --.--- (calculated only if fw >= v1.15)]\n");
     }
 
     printf ("charger status:\n");
@@ -399,8 +399,8 @@ int readSerialData (int fileDescriptor, int bCont)
     if (mppt.fw >= 112) {
 //        printf ("load: %d\n", mppt.load);
 	switch(mppt.load) {
-	    case 0: printf ("  load: off\n");break;
-	    case 1: printf ("  load: on\n");break;
+	    case 0: printf ("  load: Off\n");break;
+	    case 1: printf ("  load: On\n");break;
 	    default: printf ("  load: *UNKNOWN*\n");break;
 	}
     }
@@ -422,6 +422,7 @@ int readSerialData (int fileDescriptor, int bCont)
     }
 
     printf ("\n");
+    printf ("Note: values in square brackets [] are calculated by this tool,\n      not in the charger.\n\n");
   }
   while (keepRunning && bCont);
 
