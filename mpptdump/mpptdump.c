@@ -1,6 +1,3 @@
-// compile:
-// gcc mpptdump.c -o mpptdump
-
 #include <ctype.h>	// for isprint
 #include <stdio.h>	// for sprintf, printf
 #include <string.h>	// for strerror, strlen, index, strncmp, strncpy, strcmp
