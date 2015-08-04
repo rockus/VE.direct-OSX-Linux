@@ -12,11 +12,14 @@
 #include <time.h>	// for ctime, time
 #include <signal.h>	// for sigaction
 
-#define VERSION "v1.00"
+#define VERSION "v1.01"
+#define TOOLNAME "MPPTDUMP"
+#define COPYRIGHT "(c)2015 Oliver Gerler (rockus@rockus.at)"
 
 static int openSerialPort(const char *bsdPath);static int openSerialPort(const char *bsdPath);
 static int readSerialData (int fileDescriptor, int bCont);
 static void closeSerialPort(int fileDescriptor);
+static void printHelp(void);
 
 // keep running until user hits Ctrl-C (also obviously works if only one frame to be printed)
 volatile int keepRunning = 1;

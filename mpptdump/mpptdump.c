@@ -12,14 +12,12 @@ int main(int argc, char **argv)
     int		bCont;	// flag for continuous operation
     struct sigaction act;
 
-    act.sa_handler = intHandler;
-    sigaction(SIGINT, &act, NULL);	// catch Ctrl-C
-
     opterr = 0;
-    while ((c=getopt(argc, argv, "cd:")) != -1) {
+    while ((c=getopt(argc, argv, "cd:h")) != -1) {
 	switch (c) {
 	    case 'c': bCont = 1; break;
 	    case 'd': strcpy(deviceFilePath, optarg); break;
+	    case 'h': printHelp(); return 1;
 	    case '?': if (optopt=='d')
 			fprintf(stderr, "Option -%c requires an argument.\n", optopt);
 		      else if (isprint (optopt))
@@ -30,6 +28,9 @@ int main(int argc, char **argv)
 	    default: abort();
 	}
     }
+
+    act.sa_handler = intHandler;
+    sigaction(SIGINT, &act, NULL);	// catch Ctrl-C
 
 //printf ("dev: %s\n", deviceFilePath);
 
@@ -321,7 +322,7 @@ int readSerialData (int fileDescriptor, int bCont)
     printf ("\x1b[2J\x1b[1;1H");	// clear screen
 
     printf ("\033[2;3H");		// move cursor to line 2, col 3
-    printf ("MPPTDUMP %s (c)2015 Oliver Gerler (rockus@rockus.at)", VERSION);
+    printf ("%s %s %s", TOOLNAME, VERSION, COPYRIGHT);
 
     printf ("\n\n  date : ");
     time_t mytime; mytime = time(NULL); printf("%s", ctime(&mytime));
@@ -427,4 +428,15 @@ int readSerialData (int fileDescriptor, int bCont)
   while (keepRunning && bCont);
 
     return 1;	// 0 - fail; 1 - success
+}
+
+void printHelp(void) {
+	printf ("\n");
+	printf ("%s %s %s\n", TOOLNAME, VERSION, COPYRIGHT);
+	printf ("\n");
+	printf ("options:\n");
+	printf ("  -d dev : specify serial device to use\n");
+	printf ("  -c : run continuously until Ctrl-C\n");
+	printf ("  -h : print this help\n");
+	printf ("\n");
 }
