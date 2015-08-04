@@ -4,7 +4,7 @@
 CC = gcc
 CFLAGS = -I.
 
-mpptdump: mpptdump.o
+mpptdump: mpptdump.c
 	$(CC) -o $@ $^ $(CFLAGS)
 
 #######
