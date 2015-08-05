@@ -411,7 +411,7 @@ int readSerialData (int fileDescriptor, int bCont)
 
     printf ("  yield total         : %6.2fkWh\n", 1.0*mppt.yield_total/100);
     printf ("  yield today         : %6.2fkWh [%6.2fAh @ 13V nom.]\n", 1.0*mppt.yield_today/100, 1.0*mppt.yield_today/100*1000/13);
-    printf ("  yield yesterday     : %6.2fkWh\n", 1.0*mppt.yield_yesterday/100);
+    printf ("  yield yesterday     : %6.2fkWh [%6.2fAh @ 13V nom.]\n", 1.0*mppt.yield_yesterday/100, 1.0*mppt.yield_yesterday/100*1000/13);
     printf ("  max. power today    : % 4dW\n", mppt.maxpower_today);
     printf ("  max. power yesterday: % 4dW\n", mppt.maxpower_yesterday);
 
