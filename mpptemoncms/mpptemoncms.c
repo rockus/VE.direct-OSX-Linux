@@ -1,7 +1,9 @@
 #include "mpptemoncms.h"
 
 void intHandler(int sig) {
-    keepRunning = 0;
+    if (sig==SIGINT) {			// only quit on CTRL-C
+	keepRunning = 0;
+    }
 }
 
 int main(int argc, char **argv)
@@ -57,14 +59,12 @@ printf ("host: %s\n", hostName);
         printf("No host name found. Did you specify the '-h hostname' option?\n");
         return EX_UNAVAILABLE;
     }
-    he =gethostbyname(hostName);
-    if (!(he))
+    if (!(he = gethostbyname(hostName)))
     {
         fprintf(stderr, "Could not resolve host name, err %d.\n", h_errno);
         exit(1);
     }
-    socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (socket_fd <= 0)
+    if ((socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     {
         fprintf(stderr, "Could not allocate socket, err %d.\n", errno);
         exit(1);
@@ -366,7 +366,7 @@ int readSerialData (int fileDescriptor, int bCont, char *hostName, int socket_fd
 
     time_now = time(NULL);
 
-if (difftime(time_now, time_last) >= 3.0)
+if (difftime(time_now, time_last) >= 5.0)
 {
     time_last = time_now;
 
@@ -478,11 +478,7 @@ if (difftime(time_now, time_last) >= 3.0)
 
 
     // generate json string for emonCMS
-    sprintf (tcp_buffer, "GET /input/post.json?node=\"%s\"&json={vpv:%4.3f,ppv:%d,v:%4.3f,i:%4.3f}&apikey=%s HTTP/1.1\nHost: %s\n\n", NODE, 1.0*mppt.vpv/1000, mppt.ppv, 1.0*mppt.v/1000, 1.0*mppt.i/1000, APIKEY, hostName);
-    printf ("%s\n", tcp_buffer);
-    send(socket_fd, tcp_buffer, strlen(tcp_buffer), 0);
-
-    sprintf (tcp_buffer, "GET /input/post.json?node=\"%s\"&json={yt:%4.2f,yd=%4.2f,yy=%4.2f}&apikey=%s HTTP/1.1\nHost: %s\n\n", NODE, 1.0*mppt.yield_total/100, 1.0*mppt.yield_today/100, 1.0*mppt.yield_yesterday/100, APIKEY, hostName);
+    sprintf (tcp_buffer, "GET /input/post.json?node=\"%s\"&json={vpv:%4.3f,ppv:%d,v:%4.3f,i:%4.3f,yt:%4.2f,yd=%4.2f,yy=%4.2f}&apikey=%s HTTP/1.1\r\nHost: %s\r\nUser-Agent: %s\r\n\r\n", NODE, 1.0*mppt.vpv/1000, mppt.ppv, 1.0*mppt.v/1000, 1.0*mppt.i/1000, 1.0*mppt.yield_total/100, 1.0*mppt.yield_today/100, 1.0*mppt.yield_yesterday/100, APIKEY, hostName, TOOLNAME);
     printf ("%s\n", tcp_buffer);
     send(socket_fd, tcp_buffer, strlen(tcp_buffer), 0);
 
