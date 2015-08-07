@@ -12,7 +12,6 @@ int main(int argc, char **argv)
     char	hostName[1024];
     int		fileDescriptor;
     int		c;
-    int		bCont;	// flag for continuous operation
     struct sigaction act;
 
     int			socket_fd;
@@ -26,7 +25,6 @@ int main(int argc, char **argv)
     }
 
     opterr = 0;
-    bCont = 1;	// keep running
     while ((c=getopt(argc, argv, "d:h:")) != -1) {
 	switch (c) {
 	    case 'd': strcpy(deviceFilePath, optarg); break;
@@ -46,12 +44,18 @@ int main(int argc, char **argv)
     sigaction(SIGINT, &act, NULL);	// catch Ctrl-C
 
 //printf ("dev: %s\n", deviceFilePath);
-printf ("host: %s\n", hostName);
+//printf ("host: %s\n", hostName);
 
     if (!deviceFilePath[0])
     {
         printf("No serial device found. Did you specify the '-d /dev/device' option?\n");
         return EX_UNAVAILABLE;
+    }
+    fileDescriptor = openSerialPort(deviceFilePath);
+    if (fileDescriptor == -1)
+    {
+	close(socket_fd);
+        return EX_IOERR;
     }
 
     if (!hostName[0])
@@ -64,6 +68,9 @@ printf ("host: %s\n", hostName);
         fprintf(stderr, "Could not resolve host name, err %d.\n", h_errno);
         exit(1);
     }
+
+  keepRunning = 1;
+  do {
     if ((socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     {
         fprintf(stderr, "Could not allocate socket, err %d.\n", errno);
@@ -78,21 +85,16 @@ printf ("host: %s\n", hostName);
         close(socket_fd);
         exit(1);
     }
-
-
-    fileDescriptor = openSerialPort(deviceFilePath);
-    if (fileDescriptor == -1)
-    {
-	close(socket_fd);
-        return EX_IOERR;
-    }
-
-    if (!(readSerialData(fileDescriptor, bCont, hostName, socket_fd))) {
+    if (!(readSerialData(fileDescriptor, hostName, socket_fd))) {
         printf("Could not read data.\n");
     }
-
-    closeSerialPort(fileDescriptor);
     close(socket_fd);
+
+    sleep (5);
+  } while (keepRunning);
+
+    printf ("Closing down.\n");
+    closeSerialPort(fileDescriptor);
     return EX_OK;
 }
 
@@ -287,7 +289,7 @@ void closeSerialPort(int fileDescriptor)
 }
 
 // Read from serial port
-int readSerialData (int fileDescriptor, int bCont, char *hostName, int socket_fd)
+int readSerialData (int fileDescriptor, char *hostName, int socket_fd)
 {
     char	buffer[256];
     char	*bufPtr;
@@ -295,18 +297,12 @@ int readSerialData (int fileDescriptor, int bCont, char *hostName, int socket_fd
     char	*valuePtr;
     int		found;
     int		checksum_line, checksum;
-    int 	nParams, nFrames, nFramesOk, i, j, iMax;
-    time_t 	time_now, time_last;
+    int 	nParams, i, j, iMax;
+    time_t	time_now;
 
     // for sending data to emonCMS
     char tcp_buffer[1024];
     int num;
-
-    nFrames = 0;
-    time_last = time(NULL);
-
-  do
-  {
 
     for (nParams=0; nParams<17; nParams++)
     {
@@ -336,7 +332,7 @@ int readSerialData (int fileDescriptor, int bCont, char *hostName, int socket_fd
 		valuePtr++;					// point to after delimiter for 'value'
 
 
-		if (!(strncmp(buffer,"PID",3))) {mppt.pid = strtol(valuePtr, NULL, 0);found=1; nParams=1; checksum=checksum_line; nFrames++;}
+		if (!(strncmp(buffer,"PID",3))) {mppt.pid = strtol(valuePtr, NULL, 0);found=1; nParams=1; checksum=checksum_line;}
 		if (!(strncmp(buffer,"FW", 2))) {mppt.fw = strtod(valuePtr, NULL); found=1; checksum += checksum_line;}
 		if (!(strncmp(buffer,"SER#", 4))) {strncpy(mppt.ser, valuePtr, 16); found=1; checksum += checksum_line;}
 		if (!(strcmp(buffer,"V"))) {mppt.v = strtod(valuePtr, NULL); found=1; checksum += checksum_line;}
@@ -364,21 +360,15 @@ int readSerialData (int fileDescriptor, int bCont, char *hostName, int socket_fd
 	}
     }
 
-    time_now = time(NULL);
-
-if (difftime(time_now, time_last) >= 5.0)
-{
-    time_last = time_now;
-
     printf ("\x1b[2J\x1b[1;1H");	// clear screen
 
     printf ("\033[2;3H");		// move cursor to line 2, col 3
     printf ("%s %s %s", TOOLNAME, VERSION, COPYRIGHT);
 
     printf ("\n\n  date : ");
-    printf("%s", ctime(&time_now));
 
-    printf ("  frame: %d\n\n", nFrames);
+    time_now = time(NULL);
+    printf("%s\n", ctime(&time_now));
 
     printf ("charger:\n");
 //    printf ("pid : 0x%04X\n", mppt.pid);
@@ -478,9 +468,9 @@ if (difftime(time_now, time_last) >= 5.0)
 
 
     // generate json string for emonCMS
-    sprintf (tcp_buffer, "GET /input/post.json?node=\"%s\"&json={vpv:%4.3f,ppv:%d,v:%4.3f,i:%4.3f,yt:%4.2f,yd=%4.2f,yy=%4.2f}&apikey=%s HTTP/1.1\r\nHost: %s\r\nUser-Agent: %s\r\n\r\n", NODE, 1.0*mppt.vpv/1000, mppt.ppv, 1.0*mppt.v/1000, 1.0*mppt.i/1000, 1.0*mppt.yield_total/100, 1.0*mppt.yield_today/100, 1.0*mppt.yield_yesterday/100, APIKEY, hostName, TOOLNAME);
-    printf ("%s\n", tcp_buffer);
-    send(socket_fd, tcp_buffer, strlen(tcp_buffer), 0);
+    sprintf (tcp_buffer, "GET /input/post.json?node=\"%s\"&json={vpv:%4.3f,ppv:%d,v:%4.3f,i:%4.3f,yt:%4.2f,yd=%4.2f,yy=%4.2f}&apikey=%s HTTP/1.1\r\nHost: %s\r\nUser-Agent: %s\r\nConnection: keep-alive\r\n\r\n", NODE, 1.0*mppt.vpv/1000, mppt.ppv, 1.0*mppt.v/1000, 1.0*mppt.i/1000, 1.0*mppt.yield_total/100, 1.0*mppt.yield_today/100, 1.0*mppt.yield_yesterday/100, APIKEY, hostName, TOOLNAME);
+    printf ("%ld\n%s\n", strlen(tcp_buffer), tcp_buffer);
+    printf ("send: %ld\n", send(socket_fd, tcp_buffer, strlen(tcp_buffer), 0));
 
 /*
     if ((send(socket_fd, tcp_buffer, strlen(tcp_buffer), 0)) < 0)
@@ -493,10 +483,6 @@ if (difftime(time_now, time_last) >= 5.0)
 	printf ("%s\n", tcp_buffer);
     } while (num>0);
 */
-  }	// if difftime
-
-  }
-  while (keepRunning && bCont);
 
     return 1;	// 0 - fail; 1 - success
 }

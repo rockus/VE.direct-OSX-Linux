@@ -24,7 +24,7 @@
 #define NODE "MPPT_75_15"
 
 static int openSerialPort(const char *bsdPath);static int openSerialPort(const char *bsdPath);
-static int readSerialData (int fileDescriptor, int bCont, char *hostName, int socket_fd);
+static int readSerialData (int fileDescriptor, char *hostName, int socket_fd);
 static void closeSerialPort(int fileDescriptor);
 static void printHelp(void);
 
