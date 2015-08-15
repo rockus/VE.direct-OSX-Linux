@@ -7,6 +7,6 @@ mpptdump
 
 mpptemoncms
 ===========
-* **MacOSX**: clone, make and enjoy.
+* **MacOSX**: clone, copy mpptemoncms_default.h to mpptemoncms.h and edit, make, and enjoy.
 * **Raspi**: not yet tried
 * **Linux**: not yet tried
