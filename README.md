@@ -7,3 +7,11 @@ Raspi with FT232 USB-Serial Converter via ttyUSB0: does not work with FT232RL; a
 Raspi with native serial interface ttyAMA0: not yet tried
 
 Linux: not yet tried
+
+mpptemoncms
+===========
+MacOSX: clone, make and enjoy.
+
+Raspi: not yet tried
+
+Linux: not yet tried
