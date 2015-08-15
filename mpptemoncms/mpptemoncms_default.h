@@ -1,3 +1,6 @@
+// rename to mpptemoncms.h
+// add APIKEY and NODE defines
+
 #include <ctype.h>	// for isprint
 #include <stdio.h>	// for sprintf, printf, fprintf
 #include <string.h>	// for strerror, strlen, index, strncmp, strncpy, strcmp
@@ -20,8 +23,8 @@
 #define TOOLNAME "MPPT EMONCMS"
 #define COPYRIGHT "(c)2015 Oliver Gerler (rockus@rockus.at)"
 
-#define APIKEY "4f0162ae3f3e67c84336950ad1b98abe"
-#define NODE "MPPT_75_15"
+#define APIKEY "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+#define NODE "xxxxxxxxx"
 
 static int openSerialPort(const char *bsdPath);static int openSerialPort(const char *bsdPath);
 static int readSerialData (int fileDescriptor, char *hostName, int socket_fd);
