@@ -63,23 +63,23 @@ static int openSerialPort(const char *bsdPath)
     int             fileDescriptor = -1;
     int             handshake;
     struct termios  options;
-    
+
     // Open the serial port read/write, with no controlling terminal, and don't wait for a connection.
     // The O_NONBLOCK flag also causes subsequent I/O on the device to be non-blocking.
     // See open(2) <x-man-page://2/open> for details.
-    
+
     fileDescriptor = open(bsdPath, O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (fileDescriptor == -1) {
         printf("Error opening serial port %s - %s(%d).\n",
                bsdPath, strerror(errno), errno);
         goto error;
     }
-    
+
     // Note that open() follows POSIX semantics: multiple open() calls to the same file will succeed
     // unless the TIOCEXCL ioctl is issued. This will prevent additional opens except by root-owned
     // processes.
     // See tty(4) <x-man-page//4/tty> and ioctl(2) <x-man-page//2/ioctl> for details.
-    
+
     if (ioctl(fileDescriptor, TIOCEXCL) == -1) {
         printf("Error setting TIOCEXCL on %s - %s(%d).\n",
                bsdPath, strerror(errno), errno);
@@ -102,54 +102,56 @@ static int openSerialPort(const char *bsdPath)
                bsdPath, strerror(errno), errno);
         goto error;
     }
-    
+
     // The serial port attributes such as timeouts and baud rate are set by modifying the termios
     // structure and then calling tcsetattr() to cause the changes to take effect. Note that the
     // changes will not become effective without the tcsetattr() call.
     // See tcsetattr(4) <x-man-page://4/tcsetattr> for details.
-    
+
     options = gOriginalTTYAttrs;
-    
+
     // Print the current input and output baud rates.
     // See tcsetattr(4) <x-man-page://4/tcsetattr> for details.
-    
 //    printf("Current input baud rate is %d\n", (int) cfgetispeed(&options));
 //    printf("Current output baud rate is %d\n", (int) cfgetospeed(&options));
 
     // Set raw input (non-canonical) mode, with reads blocking until either a single character
     // has been received or a one second timeout expires.
     // See tcsetattr(4) <x-man-page://4/tcsetattr> and termios(4) <x-man-page://4/termios> for details.
-    
+
     cfmakeraw(&options);
     options.c_cc[VMIN] = 0;
     options.c_cc[VTIME] = 10;
-    
+
     // The baud rate, word length, and handshake options can be set as follows:
-    
-    cfsetspeed(&options, B19200);       // Set 19200 baud
+
+    if ((cfsetspeed(&options, B19200)) <0)       // Set 19200 baud
+    {
+        printf ("Could not set baudrate.\n");
+    }
 //    options.c_cflag |= (CS7        |    // Use 7 bit words
 //                        PARENB     |    // Parity enable (even parity if PARODD not also set)
 //                        CCTS_OFLOW |    // CTS flow control of output
 //                        CRTS_IFLOW);    // RTS flow control of input
     options.c_cflag = CS8;
 
-/*  
+/*
     // The IOSSIOSPEED ioctl can be used to set arbitrary baud rates
     // other than those specified by POSIX. The driver for the underlying serial hardware
     // ultimately determines which baud rates can be used. This ioctl sets both the input
     // and output speed.
-    
-    speed_t speed = 14400; // Set 14400 baud
+
+    speed_t speed = 19200; // Set 14400 baud
     if (ioctl(fileDescriptor, IOSSIOSPEED, &speed) == -1) {
         printf("Error calling ioctl(..., IOSSIOSPEED, ...) %s - %s(%d).\n",
                bsdPath, strerror(errno), errno);
     }
 */
+
     // Print the new input and output baud rates. Note that the IOSSIOSPEED ioctl interacts with the serial driver
     // directly bypassing the termios struct. This means that the following two calls will not be able to read
     // the current baud rate if the IOSSIOSPEED ioctl was used but will instead return the speed set by the last call
     // to cfsetspeed.
-    
 //    printf("Input baud rate changed to %d\n", (int) cfgetispeed(&options));
 //    printf("Output baud rate changed to %d\n", (int) cfgetospeed(&options));
 
@@ -281,8 +283,10 @@ int readSerialData (int fileDescriptor, int bCont)
 	}
 
 	if (strlen(buffer) > 2) {			// only consider non-empty lines
-	    *(bufPtr-2) = '\0';	// delete 0d0a (bufPtr points to first byte in buffer that is empty)
-	    // buffer now contains one line of data, excluding 0d0a
+//	    *(bufPtr-1) = '\0';	// delete 0d0a (bufPtr points to first byte in buffer that is empty)
+//	    // buffer now contains one line of data, excluding 0d0a
+//	this is not needed, as strtol/strtod below correctly strip these characters
+//printf ("%s\n", buffer);
 
 	    valuePtr = index(buffer, '\t');		// pointer to delimiter
 	    if (valuePtr) {				// only if delimiter found
