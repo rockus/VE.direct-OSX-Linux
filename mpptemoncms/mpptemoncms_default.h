@@ -19,7 +19,7 @@
 #include <arpa/inet.h>	// for sockaddr_in
 #include <netdb.h>	// for gethostbyname
 
-#define VERSION "v1.00"
+#define VERSION "v1.01"
 #define TOOLNAME "MPPT EMONCMS"
 #define COPYRIGHT "(c)2015 Oliver Gerler (rockus@rockus.at)"
 

@@ -12,7 +12,7 @@
 #include <time.h>	// for ctime, time
 #include <signal.h>	// for sigaction
 
-#define VERSION "v1.02"
+#define VERSION "v1.03"
 #define TOOLNAME "MPPTDUMP"
 #define COPYRIGHT "(c)2015 Oliver Gerler (rockus@rockus.at)"
 
