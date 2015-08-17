@@ -112,8 +112,8 @@ static int openSerialPort(const char *bsdPath)
 
     // Print the current input and output baud rates.
     // See tcsetattr(4) <x-man-page://4/tcsetattr> for details.
-    printf("Current input baud rate is %d\n", (int) cfgetispeed(&options));
-    printf("Current output baud rate is %d\n", (int) cfgetospeed(&options));
+//    printf("Current input baud rate is %d\n", (int) cfgetispeed(&options));
+//    printf("Current output baud rate is %d\n", (int) cfgetospeed(&options));
 
     // Set raw input (non-canonical) mode, with reads blocking until either a single character
     // has been received or a one second timeout expires.
@@ -162,8 +162,8 @@ static int openSerialPort(const char *bsdPath)
     // directly bypassing the termios struct. This means that the following two calls will not be able to read
     // the current baud rate if the IOSSIOSPEED ioctl was used but will instead return the speed set by the last call
     // to cfsetspeed.
-    printf("Input baud rate changed to %d\n", (int) cfgetispeed(&options));
-    printf("Output baud rate changed to %d\n", (int) cfgetospeed(&options));
+//    printf("Input baud rate changed to %d\n", (int) cfgetispeed(&options));
+//    printf("Output baud rate changed to %d\n", (int) cfgetospeed(&options));
 
     // Cause the new options to take effect immediately.
     if (tcsetattr(fileDescriptor, TCSANOW, &options) == -1) {
