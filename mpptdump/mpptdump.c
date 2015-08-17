@@ -112,8 +112,8 @@ static int openSerialPort(const char *bsdPath)
 
     // Print the current input and output baud rates.
     // See tcsetattr(4) <x-man-page://4/tcsetattr> for details.
-//    printf("Current input baud rate is %d\n", (int) cfgetispeed(&options));
-//    printf("Current output baud rate is %d\n", (int) cfgetospeed(&options));
+    printf("Current input baud rate is %d\n", (int) cfgetispeed(&options));
+    printf("Current output baud rate is %d\n", (int) cfgetospeed(&options));
 
     // Set raw input (non-canonical) mode, with reads blocking until either a single character
     // has been received or a one second timeout expires.
@@ -125,15 +125,25 @@ static int openSerialPort(const char *bsdPath)
 
     // The baud rate, word length, and handshake options can be set as follows:
 
-    if ((cfsetspeed(&options, B19200)) <0)       // Set 19200 baud
-    {
-        printf ("Could not set baudrate.\n");
-    }
 //    options.c_cflag |= (CS7        |    // Use 7 bit words
 //                        PARENB     |    // Parity enable (even parity if PARODD not also set)
 //                        CCTS_OFLOW |    // CTS flow control of output
 //                        CRTS_IFLOW);    // RTS flow control of input
-    options.c_cflag = CS8;
+    options.c_cflag = CS8 | CLOCAL | CREAD;
+	// The flags (defined in /usr/include/termios.h - see http://pubs.opengroup.org/onlinepubs/007908799/xsh/termios.h.html):
+	//	Baud rate:- B1200, B2400, B4800, B9600, B19200, B38400, B57600, B115200, B230400, B460800, B500000, B576000, B921600, B1000000, B1152000, B1500000, B2000000, B2500000, B3000000, B3500000, B4000000
+	//	CSIZE:- CS5, CS6, CS7, CS8
+	//	CLOCAL - Ignore modem status lines
+	//	CREAD - Enable receiver
+	//	IGNPAR = Ignore characters with parity errors
+	//	ICRNL - Map CR to NL on input (Use for ASCII comms where you want to auto correct end of line characters - don't use for bianry comms!)
+	//	PARENB - Parity enable
+	//	PARODD - Odd parity (else even)
+
+    if ((cfsetspeed(&options, B19200)) <0)       // Set 19200 baud
+    {
+        printf ("Could not set baudrate.\n");
+    }
 
 /*
     // The IOSSIOSPEED ioctl can be used to set arbitrary baud rates
@@ -152,20 +162,20 @@ static int openSerialPort(const char *bsdPath)
     // directly bypassing the termios struct. This means that the following two calls will not be able to read
     // the current baud rate if the IOSSIOSPEED ioctl was used but will instead return the speed set by the last call
     // to cfsetspeed.
-//    printf("Input baud rate changed to %d\n", (int) cfgetispeed(&options));
-//    printf("Output baud rate changed to %d\n", (int) cfgetospeed(&options));
+    printf("Input baud rate changed to %d\n", (int) cfgetispeed(&options));
+    printf("Output baud rate changed to %d\n", (int) cfgetospeed(&options));
 
     // Cause the new options to take effect immediately.
-
     if (tcsetattr(fileDescriptor, TCSANOW, &options) == -1) {
         printf("Error setting tty attributes %s - %s(%d).\n",
                bsdPath, strerror(errno), errno);
         goto error;
     }
 
+/*
     // To set the modem handshake lines, use the following ioctls.
     // See tty(4) <x-man-page//4/tty> and ioctl(2) <x-man-page//2/ioctl> for details.
-/*
+
     // Assert Data Terminal Ready (DTR)
     if (ioctl(fileDescriptor, TIOCSDTR) == -1) {
         printf("Error asserting DTR %s - %s(%d).\n",

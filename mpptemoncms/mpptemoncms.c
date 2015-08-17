@@ -169,12 +169,12 @@ static int openSerialPort(const char *bsdPath)
     
     // The baud rate, word length, and handshake options can be set as follows:
     
-    cfsetspeed(&options, B19200);       // Set 19200 baud
 //    options.c_cflag |= (CS7        |    // Use 7 bit words
 //                        PARENB     |    // Parity enable (even parity if PARODD not also set)
 //                        CCTS_OFLOW |    // CTS flow control of output
 //                        CRTS_IFLOW);    // RTS flow control of input
-    options.c_cflag = CS8;
+    options.c_cflag = CS8 | CLOCAL | CREAD;
+    cfsetspeed(&options, B19200);       // Set 19200 baud
 
 /*  
     // The IOSSIOSPEED ioctl can be used to set arbitrary baud rates
@@ -322,7 +322,7 @@ int readSerialData (int fileDescriptor, char *hostName, int socket_fd)
 	}
 
 	if (strlen(buffer) > 2) {			// only consider non-empty lines
-	    *(bufPtr-2) = '\0';	// delete 0d0a (bufPtr points to first byte in buffer that is empty)
+//	    *(bufPtr-2) = '\0';	// delete 0d0a (bufPtr points to first byte in buffer that is empty)
 	    // buffer now contains one line of data, excluding 0d0a
 
 	    valuePtr = index(buffer, '\t');		// pointer to delimiter
