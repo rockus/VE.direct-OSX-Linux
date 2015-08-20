@@ -11,7 +11,8 @@ and displays them in the shell. Output can be a single read-out or a continuous 
 mpptemoncms
 ===========
 Similarly to mpptdump, this tool repeatedly reads out (and displays) data from VE.direct chargers,
-and sends them to an emonCMS (http://emoncms.org/) host.
+and sends them to an emonCMS (http://emoncms.org/) host. This, also, is a command line tool.
+It can be brought into background (via Ctrl-Z, bg), but does not make itself into a daemon - yet.
 
 * **MacOSX**: clone, make, copy mpptemoncms.conf.default to mpptemoncms.conf and edit, and enjoy.
 * **Raspi** with FT232 USB-Serial Converter via ttyUSB0: clone, make, copy mpptemoncms.conf.default to mpptemoncms.conf and edit, and enjoy.
