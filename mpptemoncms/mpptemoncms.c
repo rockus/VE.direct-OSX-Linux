@@ -1,5 +1,7 @@
 #include "mpptemoncms.h"
 
+struct mppt mppt;
+
 void intHandler(int sig) {
     if (sig==SIGINT) {			// only quit on CTRL-C
 	keepRunning = 0;
@@ -8,8 +10,12 @@ void intHandler(int sig) {
 
 int main(int argc, char **argv)
 {
+    char	configFilePath[MAXPATHLEN];
     char	deviceFilePath[MAXPATHLEN];
     char	hostName[1024];
+//    const char	*pHostName;
+//    const char	*pNodeName;
+//    const char	*pApiKey;
     int		fileDescriptor;
     int		c;
     struct sigaction act;
@@ -18,6 +24,12 @@ int main(int argc, char **argv)
     struct sockaddr_in	server_info;
     struct hostent	*he;
 
+    config_t cfg;
+//    config_setting_t *setting;
+//    const char *str;
+
+    struct config config;
+
     if (argc==1)
     {
 	printHelp();
@@ -25,10 +37,12 @@ int main(int argc, char **argv)
     }
 
     opterr = 0;
-    while ((c=getopt(argc, argv, "d:h:")) != -1) {
+//    while ((c=getopt(argc, argv, "c:d:h:")) != -1) {
+    while ((c=getopt(argc, argv, "c:d:")) != -1) {
 	switch (c) {
+	    case 'c': strcpy(configFilePath, optarg); break;
 	    case 'd': strcpy(deviceFilePath, optarg); break;
-	    case 'h': strcpy(hostName, optarg); break;
+//	    case 'h': strcpy(hostName, optarg); break;
 	    case '?': if (optopt=='d' || optopt=='h')
 			fprintf(stderr, "Option -%c requires an argument.\n", optopt);
 		      else if (isprint (optopt))
@@ -43,29 +57,67 @@ int main(int argc, char **argv)
     act.sa_handler = intHandler;
     sigaction(SIGINT, &act, NULL);	// catch Ctrl-C
 
-//printf ("dev: %s\n", deviceFilePath);
-//printf ("host: %s\n", hostName);
+    // read config file
+    config_init(&cfg);
+    /* Read the file. If there is an error, report it and exit. */
+    if(! config_read_file(&cfg, configFilePath))
+    {
+	fprintf(stderr, "%s:%d - %s\n", config_error_file(&cfg),
+	    config_error_line(&cfg), config_error_text(&cfg));
+	config_destroy(&cfg);
+	return(EXIT_FAILURE);
+    }
+    // node, host, apikey
+    if (!(config_lookup_string(&cfg, "node", &(config.pNodeName))))
+    {
+	fprintf(stderr, "No 'node' setting in configuration file.\n");
+	config_destroy(&cfg);
+	return(EXIT_FAILURE);
+    }
+    if (!(config_lookup_string(&cfg, "host", &(config.pHostName))))
+    {
+	fprintf(stderr, "No 'host' setting in configuration file.\n");
+	config_destroy(&cfg);
+	return(EXIT_FAILURE);
+    }
+    if (!(config_lookup_string(&cfg, "apikey", &(config.pApiKey))))
+    {
+	fprintf(stderr, "No 'apikey' setting in configuration file.\n");
+	config_destroy(&cfg);
+	return(EXIT_FAILURE);
+    }
+
+printf ("conf file: %s\n", configFilePath);
+printf ("dev: %s\n", deviceFilePath);
+printf ("host: %s\n", config.pHostName);
+printf ("node: %s\n", config.pNodeName);
+printf ("API key: %s\n", config.pApiKey);
 
     if (!deviceFilePath[0])
     {
         printf("No serial device found. Did you specify the '-d /dev/device' option?\n");
+	config_destroy(&cfg);
         return EX_UNAVAILABLE;
     }
     fileDescriptor = openSerialPort(deviceFilePath);
     if (fileDescriptor == -1)
     {
-	close(socket_fd);
+	config_destroy(&cfg);
         return EX_IOERR;
     }
 
-    if (!hostName[0])
+    if (!config.pHostName[0])
     {
         printf("No host name found. Did you specify the '-h hostname' option?\n");
+	closeSerialPort(fileDescriptor);
+	config_destroy(&cfg);
         return EX_UNAVAILABLE;
     }
-    if (!(he = gethostbyname(hostName)))
+    if (!(he = gethostbyname(config.pHostName)))
     {
         fprintf(stderr, "Could not resolve host name, err %d.\n", h_errno);
+	closeSerialPort(fileDescriptor);
+	config_destroy(&cfg);
         exit(1);
     }
 
@@ -74,6 +126,8 @@ int main(int argc, char **argv)
     if ((socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     {
         fprintf(stderr, "Could not allocate socket, err %d.\n", errno);
+	closeSerialPort(fileDescriptor);
+	config_destroy(&cfg);
         exit(1);
     }
     server_info.sin_family = AF_INET;
@@ -83,9 +137,11 @@ int main(int argc, char **argv)
     {
         fprintf(stderr, "Could not connect to server, err%d.\n", errno);
         close(socket_fd);
+	closeSerialPort(fileDescriptor);
+	config_destroy(&cfg);
         exit(1);
     }
-    if (!(readSerialData(fileDescriptor, hostName, socket_fd))) {
+    if (!(readSerialData(fileDescriptor, &config, socket_fd))) {
         printf("Could not read data.\n");
     }
     close(socket_fd);
@@ -95,6 +151,7 @@ int main(int argc, char **argv)
 
     printf ("Closing down.\n");
     closeSerialPort(fileDescriptor);
+    config_destroy(&cfg);
     return EX_OK;
 }
 
@@ -106,23 +163,23 @@ static int openSerialPort(const char *bsdPath)
     int             fileDescriptor = -1;
     int             handshake;
     struct termios  options;
-    
+
     // Open the serial port read/write, with no controlling terminal, and don't wait for a connection.
     // The O_NONBLOCK flag also causes subsequent I/O on the device to be non-blocking.
     // See open(2) <x-man-page://2/open> for details.
-    
+
     fileDescriptor = open(bsdPath, O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (fileDescriptor == -1) {
         printf("Error opening serial port %s - %s(%d).\n",
                bsdPath, strerror(errno), errno);
         goto error;
     }
-    
+
     // Note that open() follows POSIX semantics: multiple open() calls to the same file will succeed
     // unless the TIOCEXCL ioctl is issued. This will prevent additional opens except by root-owned
     // processes.
     // See tty(4) <x-man-page//4/tty> and ioctl(2) <x-man-page//2/ioctl> for details.
-    
+
     if (ioctl(fileDescriptor, TIOCEXCL) == -1) {
         printf("Error setting TIOCEXCL on %s - %s(%d).\n",
                bsdPath, strerror(errno), errno);
@@ -145,30 +202,30 @@ static int openSerialPort(const char *bsdPath)
                bsdPath, strerror(errno), errno);
         goto error;
     }
-    
+
     // The serial port attributes such as timeouts and baud rate are set by modifying the termios
     // structure and then calling tcsetattr() to cause the changes to take effect. Note that the
     // changes will not become effective without the tcsetattr() call.
     // See tcsetattr(4) <x-man-page://4/tcsetattr> for details.
-    
+
     options = gOriginalTTYAttrs;
-    
+
     // Print the current input and output baud rates.
     // See tcsetattr(4) <x-man-page://4/tcsetattr> for details.
-    
+
 //    printf("Current input baud rate is %d\n", (int) cfgetispeed(&options));
 //    printf("Current output baud rate is %d\n", (int) cfgetospeed(&options));
 
     // Set raw input (non-canonical) mode, with reads blocking until either a single character
     // has been received or a one second timeout expires.
     // See tcsetattr(4) <x-man-page://4/tcsetattr> and termios(4) <x-man-page://4/termios> for details.
-    
+
     cfmakeraw(&options);
     options.c_cc[VMIN] = 0;
     options.c_cc[VTIME] = 10;
-    
+
     // The baud rate, word length, and handshake options can be set as follows:
-    
+
 //    options.c_cflag |= (CS7        |    // Use 7 bit words
 //                        PARENB     |    // Parity enable (even parity if PARODD not also set)
 //                        CCTS_OFLOW |    // CTS flow control of output
@@ -176,23 +233,11 @@ static int openSerialPort(const char *bsdPath)
     options.c_cflag = CS8 | CLOCAL | CREAD;
     cfsetspeed(&options, B19200);       // Set 19200 baud
 
-/*  
-    // The IOSSIOSPEED ioctl can be used to set arbitrary baud rates
-    // other than those specified by POSIX. The driver for the underlying serial hardware
-    // ultimately determines which baud rates can be used. This ioctl sets both the input
-    // and output speed.
-    
-    speed_t speed = 14400; // Set 14400 baud
-    if (ioctl(fileDescriptor, IOSSIOSPEED, &speed) == -1) {
-        printf("Error calling ioctl(..., IOSSIOSPEED, ...) %s - %s(%d).\n",
-               bsdPath, strerror(errno), errno);
-    }
-*/
     // Print the new input and output baud rates. Note that the IOSSIOSPEED ioctl interacts with the serial driver
     // directly bypassing the termios struct. This means that the following two calls will not be able to read
     // the current baud rate if the IOSSIOSPEED ioctl was used but will instead return the speed set by the last call
     // to cfsetspeed.
-    
+
 //    printf("Input baud rate changed to %d\n", (int) cfgetispeed(&options));
 //    printf("Output baud rate changed to %d\n", (int) cfgetospeed(&options));
 
@@ -204,65 +249,15 @@ static int openSerialPort(const char *bsdPath)
         goto error;
     }
 
-    // To set the modem handshake lines, use the following ioctls.
-    // See tty(4) <x-man-page//4/tty> and ioctl(2) <x-man-page//2/ioctl> for details.
-/*
-    // Assert Data Terminal Ready (DTR)
-    if (ioctl(fileDescriptor, TIOCSDTR) == -1) {
-        printf("Error asserting DTR %s - %s(%d).\n",
-               bsdPath, strerror(errno), errno);
-    }
-
-    // Clear Data Terminal Ready (DTR)
-    if (ioctl(fileDescriptor, TIOCCDTR) == -1) {
-        printf("Error clearing DTR %s - %s(%d).\n",
-               bsdPath, strerror(errno), errno);
-    }
-*/
-
-    // Set the modem lines depending on the bits set in handshake
-//    handshake = TIOCM_DTR | TIOCM_RTS | TIOCM_CTS | TIOCM_DSR;
-    handshake = TIOCM_DTR;	// set DTR, clear RTS and all others
-    if (ioctl(fileDescriptor, TIOCMSET, &handshake) == -1) {
-        printf("Error setting handshake lines %s - %s(%d).\n",
-               bsdPath, strerror(errno), errno);
-    }
-
-    // To read the state of the modem lines, use the following ioctl.
-    // See tty(4) <x-man-page//4/tty> and ioctl(2) <x-man-page//2/ioctl> for details.
-    // Store the state of the modem lines in handshake
-
-    if (ioctl(fileDescriptor, TIOCMGET, &handshake) == -1) {
-        printf("Error getting handshake lines %s - %s(%d).\n",
-               bsdPath, strerror(errno), errno);
-    }
-    
-//    printf("Handshake lines currently set to %04x\n", handshake);
-/*
-    unsigned long mics = 1UL;
-    
-    // Set the receive latency in microseconds. Serial drivers use this value to determine how often to
-    // dequeue characters received by the hardware. Most applications don't need to set this value: if an
-    // app reads lines of characters, the app can't do anything until the line termination character has been
-    // received anyway. The most common applications which are sensitive to read latency are MIDI and IrDA
-    // applications.
-    
-    if (ioctl(fileDescriptor, IOSSDATALAT, &mics) == -1) {
-        // set latency to 1 microsecond
-        printf("Error setting read latency %s - %s(%d).\n",
-               bsdPath, strerror(errno), errno);
-        goto error;
-    }
-*/    
     // Success
     return fileDescriptor;
-    
+
     // Failure path
 error:
     if (fileDescriptor != -1) {
         close(fileDescriptor);
     }
-    
+
     return -1;
 }
 
@@ -276,7 +271,7 @@ void closeSerialPort(int fileDescriptor)
         printf("Error waiting for drain - %s(%d).\n",
                strerror(errno), errno);
     }
-    
+
     // Traditionally it is good practice to reset a serial port back to
     // the state in which you found it. This is why the original termios struct
     // was saved.
@@ -284,12 +279,12 @@ void closeSerialPort(int fileDescriptor)
         printf("Error resetting tty attributes - %s(%d).\n",
                strerror(errno), errno);
     }
-    
+
     close(fileDescriptor);
 }
 
 // Read from serial port
-int readSerialData (int fileDescriptor, char *hostName, int socket_fd)
+int readSerialData (int fileDescriptor, struct config *config, int socket_fd)
 {
     char	buffer[256];
     char	*bufPtr;
@@ -468,7 +463,7 @@ int readSerialData (int fileDescriptor, char *hostName, int socket_fd)
 
 
     // generate json string for emonCMS
-    sprintf (tcp_buffer, "GET /input/post.json?node=\"%s\"&json={vpv:%4.3f,ppv:%d,v:%4.3f,i:%4.3f,yt:%4.2f,yd=%4.2f,yy=%4.2f}&apikey=%s HTTP/1.1\r\nHost: %s\r\nUser-Agent: %s\r\nConnection: keep-alive\r\n\r\n", NODE, 1.0*mppt.vpv/1000, mppt.ppv, 1.0*mppt.v/1000, 1.0*mppt.i/1000, 1.0*mppt.yield_total/100, 1.0*mppt.yield_today/100, 1.0*mppt.yield_yesterday/100, APIKEY, hostName, TOOLNAME);
+    sprintf (tcp_buffer, "GET /input/post.json?node=\"%s\"&json={vpv:%4.3f,ppv:%d,v:%4.3f,i:%4.3f,yt:%4.2f,yd=%4.2f,yy=%4.2f}&apikey=%s HTTP/1.1\r\nHost: %s\r\nUser-Agent: %s %s\r\nConnection: keep-alive\r\n\r\n", config->pNodeName, 1.0*mppt.vpv/1000, mppt.ppv, 1.0*mppt.v/1000, 1.0*mppt.i/1000, 1.0*mppt.yield_total/100, 1.0*mppt.yield_today/100, 1.0*mppt.yield_yesterday/100, config->pApiKey, config->pHostName, TOOLNAME, VERSION);
     printf ("%ld\n%s\n", strlen(tcp_buffer), tcp_buffer);
     printf ("send: %ld\n", send(socket_fd, tcp_buffer, strlen(tcp_buffer), 0));
 
@@ -492,7 +487,8 @@ void printHelp(void) {
 	printf ("%s %s %s\n", TOOLNAME, VERSION, COPYRIGHT);
 	printf ("\n");
 	printf ("options:\n");
+	printf ("  -c config : specify config file\n");
 	printf ("  -d dev : specify serial device to use\n");
-	printf ("  -h host : emonCMS host name\n");
+//	printf ("  -h host : emonCMS host name\n");
 	printf ("\n");
 }
