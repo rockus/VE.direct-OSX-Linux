@@ -13,9 +13,6 @@ int main(int argc, char **argv)
     char	configFilePath[MAXPATHLEN];
     char	deviceFilePath[MAXPATHLEN];
     char	hostName[1024];
-//    const char	*pHostName;
-//    const char	*pNodeName;
-//    const char	*pApiKey;
     int		fileDescriptor;
     int		c;
     struct sigaction act;
@@ -25,9 +22,6 @@ int main(int argc, char **argv)
     struct hostent	*he;
 
     config_t cfg;
-//    config_setting_t *setting;
-//    const char *str;
-
     struct config config;
 
     if (argc==1)
@@ -37,12 +31,10 @@ int main(int argc, char **argv)
     }
 
     opterr = 0;
-//    while ((c=getopt(argc, argv, "c:d:h:")) != -1) {
     while ((c=getopt(argc, argv, "c:d:")) != -1) {
 	switch (c) {
 	    case 'c': strcpy(configFilePath, optarg); break;
 	    case 'd': strcpy(deviceFilePath, optarg); break;
-//	    case 'h': strcpy(hostName, optarg); break;
 	    case '?': if (optopt=='d' || optopt=='h')
 			fprintf(stderr, "Option -%c requires an argument.\n", optopt);
 		      else if (isprint (optopt))
@@ -86,13 +78,13 @@ int main(int argc, char **argv)
 	config_destroy(&cfg);
 	return(EXIT_FAILURE);
     }
-
+/*
 printf ("conf file: %s\n", configFilePath);
 printf ("dev: %s\n", deviceFilePath);
 printf ("host: %s\n", config.pHostName);
 printf ("node: %s\n", config.pNodeName);
 printf ("API key: %s\n", config.pApiKey);
-
+*/
     if (!deviceFilePath[0])
     {
         printf("No serial device found. Did you specify the '-d /dev/device' option?\n");
@@ -489,6 +481,5 @@ void printHelp(void) {
 	printf ("options:\n");
 	printf ("  -c config : specify config file\n");
 	printf ("  -d dev : specify serial device to use\n");
-//	printf ("  -h host : emonCMS host name\n");
 	printf ("\n");
 }
