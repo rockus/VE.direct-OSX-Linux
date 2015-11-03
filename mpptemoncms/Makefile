@@ -3,7 +3,7 @@
 
 CC = gcc
 CFLAGS = -I.
-LIBS =
+LIBS = -lconfig
 
 mpptemoncms: mpptemoncms.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)

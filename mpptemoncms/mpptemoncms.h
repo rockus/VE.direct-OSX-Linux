@@ -1,6 +1,3 @@
-// rename to mpptemoncms.h
-// add APIKEY and NODE defines
-
 #include <ctype.h>	// for isprint
 #include <stdio.h>	// for sprintf, printf, fprintf
 #include <string.h>	// for strerror, strlen, index, strncmp, strncpy, strcmp
@@ -19,23 +16,25 @@
 #include <arpa/inet.h>	// for sockaddr_in
 #include <netdb.h>	// for gethostbyname
 
-#define VERSION "v1.01"
+#include <libconfig.h>
+
+#define VERSION "v2.00"
 #define TOOLNAME "MPPT EMONCMS"
 #define COPYRIGHT "(c)2015 Oliver Gerler (rockus@rockus.at)"
-
-#define APIKEY "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-#define NODE "xxxxxxxxx"
-
-static int openSerialPort(const char *bsdPath);static int openSerialPort(const char *bsdPath);
-static int readSerialData (int fileDescriptor, char *hostName, int socket_fd);
-static void closeSerialPort(int fileDescriptor);
-static void printHelp(void);
 
 // keep running until user hits Ctrl-C (also obviously works if only one frame to be printed)
 volatile int keepRunning = 1;
 
 // Hold the original termios attributes so we can reset them
 static struct termios gOriginalTTYAttrs;
+
+// configuration items
+struct config
+{
+	const char *pNodeName;
+	const char *pHostName;
+	const char *pApiKey;
+};
 
 // http://www.victronenergy.com/upload/documents/VE.Direct%20Protocol.pdf
 struct mppt {
@@ -56,4 +55,9 @@ struct mppt {
 	int maxpower_today;	// maximum power today (H21) [W]
 	int maxpower_yesterday;	// maximum power yesterday (H23) [W]
 	int hsds;		// daty sequence number			fw v1.16
-} mppt;
+};
+
+static int openSerialPort(const char *bsdPath);static int openSerialPort(const char *bsdPath);
+static int readSerialData (int fileDescriptor, struct config *config, int socket_fd);
+static void closeSerialPort(int fileDescriptor);
+static void printHelp(void);
