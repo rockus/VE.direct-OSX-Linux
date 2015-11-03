@@ -1,5 +1,14 @@
 #include "mpptdump.h"
 
+// serial code from:
+// https://developer.apple.com/library/mac/samplecode/SerialPortSample/Listings/SerialPortSample_SerialPortSample_c.html
+
+// Mac OS X Manual Pages
+// https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/index.html#group_hd_master_letters_linked_man_IO
+
+// IOKitLib.h Reference
+// https://developer.apple.com/library/mac/documentation/IOKit/Reference/IOKitLib_header_reference/#//apple_ref/c/func/IORegistryEntryCreateCFProperty
+
 void intHandler(int sig) {
     keepRunning = 0;
 }
