@@ -138,7 +138,7 @@ printf ("API key: %s\n", config.pApiKey);
     }
     close(socket_fd);
 
-    sleep (5);
+    sleep (600);
   } while (keepRunning);
 
     printf ("Closing down.\n");
@@ -455,7 +455,7 @@ int readSerialData (int fileDescriptor, struct config *config, int socket_fd)
 
 
     // generate json string for emonCMS
-    sprintf (tcp_buffer, "GET /input/post.json?node=\"%s\"&json={vpv:%4.3f,ppv:%d,v:%4.3f,i:%4.3f,yt:%4.2f,yd=%4.2f,yy=%4.2f}&apikey=%s HTTP/1.1\r\nHost: %s\r\nUser-Agent: %s %s\r\nConnection: keep-alive\r\n\r\n", config->pNodeName, 1.0*mppt.vpv/1000, mppt.ppv, 1.0*mppt.v/1000, 1.0*mppt.i/1000, 1.0*mppt.yield_total/100, 1.0*mppt.yield_today/100, 1.0*mppt.yield_yesterday/100, config->pApiKey, config->pHostName, TOOLNAME, VERSION);
+    sprintf (tcp_buffer, "GET /input/post.json?node=\"%s\"&json={vpv:%4.3f,ppv:%d,v:%4.3f,i:%4.3f,yt:%4.2f,yd:%4.2f,yy:%4.2f,mpd:%d,mpy:%d,cs:%d}&apikey=%s HTTP/1.1\r\nHost: %s\r\nUser-Agent: %s %s\r\nConnection: keep-alive\r\n\r\n", config->pNodeName, 1.0*mppt.vpv/1000, mppt.ppv, 1.0*mppt.v/1000, 1.0*mppt.i/1000, 1.0*mppt.yield_total/100, 1.0*mppt.yield_today/100, 1.0*mppt.yield_yesterday/100, mppt.maxpower_today, mppt.maxpower_yesterday, mppt.cs, config->pApiKey, config->pHostName, TOOLNAME, VERSION);
     printf ("%ld\n%s\n", strlen(tcp_buffer), tcp_buffer);
     printf ("send: %ld\n", send(socket_fd, tcp_buffer, strlen(tcp_buffer), 0));
 
