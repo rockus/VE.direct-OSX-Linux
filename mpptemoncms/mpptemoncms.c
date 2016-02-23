@@ -113,7 +113,7 @@ printf ("API key: %s\n", config.pApiKey);
         exit(1);
     }
 
-  keepRunning = 1;
+  keepRunning = 0;
   do {
     if ((socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     {
@@ -138,7 +138,7 @@ printf ("API key: %s\n", config.pApiKey);
     }
     close(socket_fd);
 
-    sleep (600);
+//    sleep (600);
   } while (keepRunning);
 
     printf ("Closing down.\n");
@@ -342,7 +342,7 @@ int readSerialData (int fileDescriptor, struct config *config, int socket_fd)
 //		if (!found) {printf("undefined field: %s:%s\n", buffer, valuePtr);}	// buffer == key	// print undefined keys
 
 //		if (found) printf ("%d:%02x:%02x\n", nParams, checksum_line, checksum);
-		if (nParams>=16 && checksum&0xff && mppt.ser[0]=='\0') {nParams=1;}	// repeat if checksum != 0 and no ser number;
+		if ((nParams>=16 && checksum&0xff && mppt.ser[0]=='\0') || mppt.v==0) {nParams=1;}	// repeat if checksum != 0 and no ser number OR if battery voltage is 0;
 	    }
 	}
     }

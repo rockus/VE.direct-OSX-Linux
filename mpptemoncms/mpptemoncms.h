@@ -18,9 +18,9 @@
 
 #include <libconfig.h>
 
-#define VERSION "v2.00"
+#define VERSION "v2.01"
 #define TOOLNAME "MPPT EMONCMS"
-#define COPYRIGHT "(c)2015 Oliver Gerler (rockus@rockus.at)"
+#define COPYRIGHT "(c)2015,2016 Oliver Gerler (rockus@rockus.at)"
 
 // keep running until user hits Ctrl-C (also obviously works if only one frame to be printed)
 volatile int keepRunning = 1;
