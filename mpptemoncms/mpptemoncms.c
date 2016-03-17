@@ -291,8 +291,9 @@ int readSerialData (int fileDescriptor, struct config *config, int socket_fd)
     char tcp_buffer[1024];
     int num;
 
-    for (nParams=0; nParams<17; nParams++)
-    {
+//    for (nParams=0; nParams<17; nParams++)
+    nParams=0;
+    do {
 	bufPtr = buffer;	// init bufPtr, i.e. flush buffer
 	found = 0;
 	do {
@@ -342,10 +343,11 @@ int readSerialData (int fileDescriptor, struct config *config, int socket_fd)
 //		if (!found) {printf("undefined field: %s:%s\n", buffer, valuePtr);}	// buffer == key	// print undefined keys
 
 //		if (found) printf ("%d:%02x:%02x\n", nParams, checksum_line, checksum);
+		if (found) nParams++;
 		if ((nParams>=16 && checksum&0xff && mppt.ser[0]=='\0') || mppt.v==0) {nParams=1;}	// repeat if checksum != 0 and no ser number OR if battery voltage is 0;
 	    }
 	}
-    }
+    } while (nParams<17);
 
     syslog(LOG_INFO, "%s / pid:%04x fw:v%4.2f err:%d v:%06.3fV vpv:%06.3fV ", VERSION, mppt.pid, 1.0*mppt.fw/100, mppt.err, 1.0*mppt.v/1000, 1.0*mppt.vpv/1000);
 
