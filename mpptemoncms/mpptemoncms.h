@@ -16,9 +16,11 @@
 #include <arpa/inet.h>	// for sockaddr_in
 #include <netdb.h>	// for gethostbyname
 
+#include <syslog.h>	// for syslog
+
 #include <libconfig.h>
 
-#define VERSION "v2.01"
+#define VERSION "v2.02"
 #define TOOLNAME "MPPT EMONCMS"
 #define COPYRIGHT "(c)2015,2016 Oliver Gerler (rockus@rockus.at)"
 

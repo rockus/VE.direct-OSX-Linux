@@ -347,6 +347,8 @@ int readSerialData (int fileDescriptor, struct config *config, int socket_fd)
 	}
     }
 
+    syslog(LOG_INFO, "%s / pid:%04x fw:v%4.2f err:%d v:%06.3fV vpv:%06.3fV ", VERSION, mppt.pid, 1.0*mppt.fw/100, mppt.err, 1.0*mppt.v/1000, 1.0*mppt.vpv/1000);
+
     printf ("\x1b[2J\x1b[1;1H");	// clear screen
 
     printf ("\033[2;3H");		// move cursor to line 2, col 3
