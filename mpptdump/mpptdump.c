@@ -355,13 +355,39 @@ int readSerialData (int fileDescriptor, int bCont)
     printf ("charger:\n");
 //    printf ("pid : 0x%04X\n", mppt.pid);
     switch (mppt.pid) {
-	case 0x300: printf ("  type: MPPT 70/15 (PID 0x300)\n");break;
-	case 0xa042: printf ("  type: MPPT 75/15 (PID 0xA042)\n");break;
-	case 0xa043: printf ("  type: MPPT 100/15 (PID 0xA043)\n");break;
-	case 0xa044: printf ("  type: MPPT 100/30 (PID 0xA044)\n");break;
-	case 0xa041: printf ("  type: MPPT 150/35 (PID 0xA041)\n");break;
-	case 0xa040: printf ("  type: MPPT 75/50 (PID 0xA040)\n");break;
-	case 0xa045: printf ("  type: MPPT 100/50 (PID 0xA045)\n");break;
+	case 0x0300: printf ("  type: BlueSolar MPPT 70/15 (PID 0x300)\n");break;
+	case 0xa040: printf ("  type: BlueSolar MPPT 75/50 (PID 0xA040)\n");break;
+	case 0xa041: printf ("  type: BlueSolar MPPT 150/35 (PID 0xA041)\n");break;
+	case 0xa042: printf ("  type: BlueSolar MPPT 75/15 (PID 0xA042)\n");break;
+	case 0xa043: printf ("  type: BlueSolar MPPT 100/15 (PID 0xA043)\n");break;
+	case 0xa044: printf ("  type: BlueSolar MPPT 100/30 (PID 0xA044)\n");break;
+	case 0xa045: printf ("  type: BlueSolar MPPT 100/50 (PID 0xA045)\n");break;
+	case 0xa046: printf ("  type: BlueSolar MPPT 150/70 (PID 0xA046)\n");break;
+	case 0xa047: printf ("  type: BlueSolar MPPT 150/100 (PID 0xA047)\n");break;
+	case 0xa048: printf ("  type: BlueSolar MPPT 75/50 rev2 (PID 0xA048)\n");break;
+	case 0xa049: printf ("  type: BlueSolar MPPT 100/50 rev2 (PID 0xA049)\n");break;
+	case 0xa04a: printf ("  type: BlueSolar MPPT 100/30 rev2 (PID 0xA04A)\n");break;
+	case 0xa04b: printf ("  type: BlueSolar MPPT 100/35 rev2 (PID 0xA04B)\n");break;
+	case 0xa04c: printf ("  type: BlueSolar MPPT 75/10 (PID 0xA04C)\n");break;
+	case 0xa04d: printf ("  type: BlueSolar MPPT 150/45 (PID 0xA04D)\n");break;
+	case 0xa04e: printf ("  type: BlueSolar MPPT 150/60 (PID 0xA04E)\n");break;
+	case 0xa04f: printf ("  type: BlueSolar MPPT 150/85 (PID 0xA04F)\n");break;
+	case 0xa050: printf ("  type: SmartSolar MPPT 250/100 (PID 0xA050)\n");break;
+	case 0xa051: printf ("  type: SmartSolar MPPT 150/100 (PID 0xA051)\n");break;
+	case 0xa052: printf ("  type: SmartSolar MPPT 150/85 (PID 0xA052)\n");break;
+	case 0xa053: printf ("  type: SmartSolar MPPT 75/15 (PID 0xA053)\n");break;
+	case 0xa054: printf ("  type: SmartSolar MPPT 75/10 (PID 0xA054)\n");break;
+	case 0xa055: printf ("  type: SmartSolar MPPT 100/15 (PID 0xA055)\n");break;
+	case 0xa056: printf ("  type: SmartSolar MPPT 100/30 (PID 0xA056)\n");break;
+	case 0xa057: printf ("  type: SmartSolar MPPT 100/50 (PID 0xA057)\n");break;
+	case 0xa058: printf ("  type: SmartSolar MPPT 150/35 (PID 0xA058)\n");break;
+	case 0xa059: printf ("  type: SmartSolar MPPT 150/100 rev2 (PID 0xA059)\n");break;
+	case 0xa05a: printf ("  type: SmartSolar MPPT 150/85 rev2 (PID 0xA05A)\n");break;
+	case 0xa05b: printf ("  type: SmartSolar MPPT 250/70 rev2 (PID 0xA05B)\n");break;
+	case 0xa05c: printf ("  type: SmartSolar MPPT 250/85 (PID 0xA05C)\n");break;
+	case 0xa05d: printf ("  type: SmartSolar MPPT 250/60 (PID 0xA05D)\n");break;
+	case 0xa05e: printf ("  type: SmartSolar MPPT 250/45 (PID 0xA05E)\n");break;
+	case 0xa05f: printf ("  type: SmartSolar MPPT 100/20 (PID 0xA05F)\n");break;
 	default: printf ("  type: *UNKNOWN*\n");break;
     }
     printf ("  fw  : v%4.2f\n", 1.0*mppt.fw/100);
@@ -382,7 +408,7 @@ int readSerialData (int fileDescriptor, int bCont)
     printf (" [v   : %6.3fV (same voltage as battery)]\n", 1.0*mppt.v/1000);
     if (mppt.fw >= 115) {
 	printf ("  il  : %6.3fA\n", 1.0*mppt.il/1000);
-	printf (" [pl  : %6.3fW\n]", 1.0*mppt.v/1000*mppt.il/1000);
+	printf (" [pl  : %6.3fW]\n", 1.0*mppt.v/1000*mppt.il/1000);
     }
     else {
         printf ("  il  : --.--- (parameter only in fw >= v1.15)\n");
