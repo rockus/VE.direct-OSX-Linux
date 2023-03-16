@@ -1,8 +1,4 @@
 # name of Node in EmonCMS Inputs
 node = "xxxxxxxx";
 
-# host to send data to
-host = "xxx.xxx.net";
-
-# write API key for writing into database, from http://[host]/user/view
-apikey = "xxxxxxxxxxxxxxxxxx";
+# host to send data 
