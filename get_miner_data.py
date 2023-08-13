@@ -1,5 +1,9 @@
+from execute_ssh_command import restart
 import subprocess
 import json
+import paramiko
+import time
+
 
 def get_json_output(ip_address, port, command):
     try:
@@ -12,15 +16,34 @@ def get_json_output(ip_address, port, command):
         return None
 
     
-def restart(ip_address):
-    try:
-        subprocess.run(["ssh", f"root@{ip_address}", "reboot"], check=True)
-        print("Miner restarted successfully.")
-    except subprocess.CalledProcessError as e:
-        print("Error restarting miner:", e)
+def is_miner_fully_booted(ip_address, port):
+    max_attempts = 10
+    current_attempt = 0
+    
+    while current_attempt < max_attempts:
+        json_output = get_json_output(ip_address, port, command={"command": "summary"})
+        
+        if json_output and "STATUS" in json_output and "SUMMARY" in json_output:
+            status = json_output["STATUS"][0]["STATUS"]
+            summary = json_output["SUMMARY"][0]["SUMMARY"]
+            
+            # Check if the status and summary indicate that the miner is fully booted
+            if status == "S" and summary == "Booted":
+                return True
+        
+        # Wait for a few seconds before the next attempt
+        if current_attempt == 0:
+            print("waiting for miner to boot")
+        else:
+            print("still waiting for miner to boot, attempt: ", current_attempt)
+        time.sleep(5)
+        current_attempt += 1
+    
+    # If max_attempts are reached and the miner is not fully booted, return False
+    return False
 
 
-def get_miner_power(ip_address, port):
+def get_miner_power(ip_address, port, depth = 0):
     json_output = get_json_output(ip_address, port, command={"command": "tunerstatus"})
     if json_output:
         try:
@@ -35,6 +58,18 @@ def get_miner_power(ip_address, port):
             print("KeyError:", e)
             print("JSON Output:", json_output)  # Print the content of the JSON output for debugging
 
-            restart(ip_address)
+            # Read SSH credentials from ssh_config.json
+            with open('ssh_config.json') as config_file:
+                ssh_config = json.load(config_file)
+                miner_ip_address = ssh_config['miner_ip_address']
+                ssh_username = ssh_config['ssh_username']
+                ssh_password = ssh_config['ssh_password']
 
-            return None
+            restart(miner_ip_address, ssh_username, ssh_password)
+
+            if depth > 0:
+                return None
+            
+            if is_miner_fully_booted(ip_address, port):
+                return get_miner_power(ip_address, port, depth = depth + 1)
+            
