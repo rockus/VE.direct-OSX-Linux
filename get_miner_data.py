@@ -11,28 +11,30 @@ def get_json_output(ip_address, port, command):
         print("Error executing command:", e)
         return None
 
-# Example usage:
-ip_address = '192.168.8.194'
-port = '4028'
+    
+def restart(ip_address):
+    try:
+        subprocess.run(["ssh", f"root@{ip_address}", "reboot"], check=True)
+        print("Miner restarted successfully.")
+    except subprocess.CalledProcessError as e:
+        print("Error restarting miner:", e)
 
 
-def get_miner_power():
+def get_miner_power(ip_address, port):
     json_output = get_json_output(ip_address, port, command={"command": "tunerstatus"})
     if json_output:
-        # print(json.dumps(json_output, indent=2))
-        approximate_power_consumption = json_output['TUNERSTATUS'][0]['ApproximateChainPowerConsumption']
-        approximate_miner_power_consumption = json_output['TUNERSTATUS'][0]['ApproximateMinerPowerConsumption']
+        try:
+            approximate_power_consumption = json_output['TUNERSTATUS'][0]['ApproximateChainPowerConsumption']
+            approximate_miner_power_consumption = json_output['TUNERSTATUS'][0]['ApproximateMinerPowerConsumption']
+            power = {
+                "chain power": approximate_power_consumption,
+                "miner power": approximate_miner_power_consumption
+            }
+            return power
+        except KeyError as e:
+            print("KeyError:", e)
+            print("JSON Output:", json_output)  # Print the content of the JSON output for debugging
 
-        """
-        print("Approximate Chain Power Consumption:", approximate_power_consumption)
-        print("Approximate Miner Power Consumption:", approximate_miner_power_consumption)
-        """
+            restart(ip_address)
 
-
-        power = {
-            "chain power": approximate_power_consumption,
-            "miner power": approximate_miner_power_consumption
-        }
-
-        return power
-
+            return None
