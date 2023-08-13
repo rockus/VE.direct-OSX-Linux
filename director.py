@@ -6,6 +6,8 @@ from execute_ssh_command import load_ssh_config
 from execute_ssh_command import stop_miner
 from execute_ssh_command import start_miner
 from execute_ssh_command import check_running
+from execute_ssh_command import print_output
+import time
 import json
 
 
@@ -18,17 +20,11 @@ with open('ssh_config.json') as config_file:
     miner_port = ssh_config['miner_port']
 
 
-def print_output(command_output):
-    if command_output != None:
-        if command_output.strip():
-            print("Command Output:")
-            print(command_output)
-
 def ensure_running(miner_ip_address, ssh_username, ssh_password):
     if not check_running(miner_ip_address, ssh_username, ssh_password):
         start_miner(miner_ip_address, ssh_username, ssh_password)
 
-def set_power_target(power_target = 152):
+def set_power_target(miner_ip_address, ssh_username, ssh_password, power_target = 152):
 
     minimum_power, maximum_power = 100, 600
 
@@ -36,7 +32,7 @@ def set_power_target(power_target = 152):
         power_target = maximum_power
 
     if power_target < minimum_power:
-        stop_miner(ip_address, ssh_username, ssh_password)
+        stop_miner(miner_ip_address, ssh_username, ssh_password)
 
     if power_target >= minimum_power and power_target <= maximum_power:
         ensure_running(miner_ip_address, ssh_username, ssh_password)
@@ -54,15 +50,19 @@ def set_power_target(power_target = 152):
 # set_power_target(152)
 def determine_delta():
     miner_power = get_miner_power(miner_ip_address, miner_port)
-    pannel_data = scan_charge_controller()
+    panel_data = scan_charge_controller()
 
     print("Miner Data:", miner_power)
-    print("Pannel Data:", pannel_data)
+    print("Pannel Data:", panel_data)
 
-    return panel_power["panel_power"] - miner_power["miner power"]
+    return panel_data["panel_power"] - miner_power["miner power"]
 
 
 while True:
-    set_power_target(get_miner_power(miner_ip_address, miner_port)["panel_power"] + determine_delta())
-
-
+    if determine_delta() > 0 and (determine_delta() / get_miner_power(miner_ip_address, miner_port)["panel_power"]) < 0.15:
+        # Ignore increases if they are insignificant, because the miner wastes energy when restarting
+        pass
+    else:
+        set_power_target(miner_ip_address, ssh_username, ssh_password, get_miner_power(miner_ip_address, miner_port)["miner power"] + determine_delta())
+    wait_time_seconds = 10 * 60  # Convert 10 minutes to seconds
+    time.sleep(wait_time_seconds)

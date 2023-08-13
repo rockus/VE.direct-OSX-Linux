@@ -5,6 +5,12 @@ def load_ssh_config():
     with open("ssh_config.json", "r") as config_file:
         return json.load(config_file)
 
+def print_output(command_output):
+    if command_output != None:
+        if command_output.strip():
+            print("Command Output:")
+            print(command_output)
+
 def execute_ssh_command(ip_address, username, password, command):
     ssh_client = paramiko.SSHClient()
     ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -45,7 +51,7 @@ def stop_miner(ip_address, ssh_username, ssh_password):
     ssh_client = paramiko.SSHClient()
     ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
-        ssh_client.connect(miner_ip_address, username=ssh_username, password=ssh_password)
+        ssh_client.connect(ip_address, username=ssh_username, password=ssh_password)
         ssh_command = "systemctl stop bosminer"  # Stop the miner service
         stdin, stdout, stderr = ssh_client.exec_command(ssh_command)
         print_output(stdout.read().decode("utf-8"))

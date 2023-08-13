@@ -9,8 +9,14 @@ def get_json_output(ip_address, port, command):
     try:
         full_command = f'echo \'{json.dumps(command)}\' | nc {ip_address} {port} | jq .'
         output = subprocess.check_output(full_command, shell=True, stderr=subprocess.STDOUT, text=True)
-        parsed_output = json.loads(output)
-        return parsed_output
+
+        try:
+            parsed_output = json.loads(output)
+            return parsed_output
+        except json.JSONDecodeError as json_error:
+            print("Error parsing JSON:", json_error)
+            return None
+
     except subprocess.CalledProcessError as e:
         print("Error executing command:", e)
         return None
