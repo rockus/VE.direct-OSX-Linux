@@ -18,15 +18,12 @@ def find_tty_usb_device_id():
 def scan_charge_controller():
     device_id = find_tty_usb_device_id()
 
-    if device_id == None:
+    if device_id is None:
         raise Exception("Didn't find the device - please check if it's connected and please check the device ID")
 
-    # Run the command and capture the output
-    # command = "sudo ./mpptemoncms/mpptemoncms -c mppt_config.conf -d /dev/ttyUSB3"
     command = "sudo ./mpptemoncms/mpptemoncms -c mppt_config.conf -d /dev/" + device_id
     output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, text=True)
 
-    # Find the line containing the JSON data using a marker
     marker = "GET /input/post.json"
     json_start = output.find(marker)
     if json_start != -1:
@@ -34,66 +31,30 @@ def scan_charge_controller():
         json_end = output.find("}", json_start) + 1
         json_data = output[json_start:json_end]
 
-        # Convert the non-standard keys to valid JSON format
         json_data = re.sub(r'(\w+):', r'"\1":', json_data)
     
-        # Parse the JSON data
         parsed_json = json.loads(json_data)
-        print(json.dumps(parsed_json, indent=2))  # Print the JSON in a formatted way
+
+
+        # Extract data into a more descriptive dictionary with formatting
+        data = {
+            "panel_voltage": "{:.3f}".format(parsed_json.get("vpv")),
+            "panel_power": parsed_json.get("ppv"),
+            "battery_voltage": "{:.3f}".format(parsed_json.get("v")),
+            "battery_current": "{:.3f}".format(parsed_json.get("i")),
+            "battery_yield_total": "{:.2f}".format(parsed_json.get("yt")),
+            "battery_yield_today": "{:.2f}".format(parsed_json.get("yd")),
+            "battery_yield_yesterday": "{:.2f}".format(parsed_json.get("yy")),
+            "max_power_today": parsed_json.get("mpd"),
+            "max_power_yesterday": parsed_json.get("mpy"),
+            "charger_status": parsed_json.get("cs")
+        }
+
+        return data
     else:
         print("JSON data not found in output.")
+        return None
 
-scan_charge_controller()
-
-
-"""
-
-# Terminology:
-
-
-  MPPT EMONCMS v2.02 (c)2015,2016 Oliver Gerler (rockus@rockus.at)
-
-  date : Sun Aug 13 19:23:11 2023
-
-charger:
-  type: *UNKNOWN*
-  fw  : v1.59
-  ser : HQ2146CMFMK
-
-panel:
-  vpv : 15.080V
- [ipv :  0.000A]
-  ppv :   0W
-battery:
-  v   : 12.700V
-  i   : -0.830A
- [p   : -10.541W]
-load:
- [v   : 12.700V (same voltage as battery)]
-  il  :  0.800A
- [pl  : 10.160W
-]charger status:
-  cs  : Off
-  err : No error
-  load: On
-  yield total         :   0.06kWh
-  yield today         :   0.00kWh [  0.00Ah @ 13V nom.]
-  yield yesterday     :   0.00kWh [  0.00Ah @ 13V nom.]
-  max. power today    :    1W
-  max. power yesterday:    0W
-  hsds: 26
-
-Note: values in square brackets [] are calculated by this tool,
-      not in the charger.
-
-256
-GET /input/post.json?node="MySolarController"&json={vpv:15.080,ppv:0,v:12.700,i:-0.830,yt:0.06,yd:0.00,yy:0.00,mpd:1,mpy:0,cs:0}&apikey=58b2624934cbfbd3388b88b4e5253256 HTTP/1.1
-Host: emoncms.org
-User-Agent: MPPT EMONCMS v2.02
-Connection: keep-alive
-
-
-send: 256
-Closing down.
-
-"""
+charge_controller_data = scan_charge_controller()
+if charge_controller_data:
+    print(json.dumps(charge_controller_data, indent=2))
