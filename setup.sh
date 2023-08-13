@@ -21,7 +21,7 @@ else
 fi
 
 # Compile mpptdump
-cd VE.direct-OSX-Linux/mpptdump
+cd mpptdump
 make
 
 # Compile mpptemoncms
