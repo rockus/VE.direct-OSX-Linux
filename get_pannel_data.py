@@ -56,5 +56,7 @@ def scan_charge_controller():
         return None
 
 charge_controller_data = scan_charge_controller()
+"""
 if charge_controller_data:
     print(json.dumps(charge_controller_data, indent=2))
+"""
