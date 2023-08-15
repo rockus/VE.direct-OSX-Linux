@@ -2,8 +2,32 @@ import subprocess
 import json
 import re
 
+class NoUSBDeviceFoundError(Exception):
+    pass
 
-def find_tty_usb_device_id():
+
+"""
+def find_tty_usb_device_id_lsusb():
+    try:
+        # Use lsusb to list connected USB devices
+        lsusb_output = subprocess.check_output(["lsusb"], stderr=subprocess.STDOUT, text=True)
+        
+        # Search for the USB device with FTDI ID
+        pattern = r"ID\s+(\w+:\w+)\s+Future Technology Devices International"
+        match = re.search(pattern, lsusb_output)
+        if match:
+            device_id = match.group(1)
+            return device_id
+        else:
+            raise NoUSBDeviceFoundError("No USB device related to FTDI found in lsusb output.")
+            
+    except subprocess.CalledProcessError as e:
+        print("Error running lsusb:", e.output)
+        return None
+"""
+
+
+def find_tty_usb_device_id_dmesg():
     command = "sudo dmesg | grep tty"
     output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, text=True)
     
@@ -14,7 +38,31 @@ def find_tty_usb_device_id():
         device_id = match.group(1)
         return device_id
     else:
+        print("Error running dmesg:", e.output)
         return None
+
+    
+
+def find_tty_usb_device_id():
+    """
+    # Try find_tty_usb_device_id_lsusb
+    try:
+        device_id = find_tty_usb_device_id_lsusb()
+        return device_id
+    except NoUSBDeviceFoundError:
+        pass
+    """
+
+    # Try find_tty_usb_device_id_dmesg
+    try:
+        device_id = find_tty_usb_device_id_dmesg()
+        return device_id
+    except NoUSBDeviceFoundError:
+        pass
+
+    # Return None if no USB device is found
+    return None
+
 
 def scan_charge_controller():
     device_id = find_tty_usb_device_id()
