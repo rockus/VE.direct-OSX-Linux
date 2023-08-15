@@ -7,7 +7,8 @@ def find_tty_usb_device_id():
     command = "sudo dmesg | grep tty"
     output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, text=True)
     
-    pattern = r"usb \d-\d:\sFTDI USB Serial Device converter now attached to (tty\w+)"
+    # pattern = r"usb \d-\d:\sFTDI USB Serial Device converter now attached to (tty\w+)"
+    pattern = r"usb \d-\d+\.\d+:\sFTDI USB Serial Device converter now attached to (tty\w+)"
     match = re.search(pattern, output)
     if match:
         device_id = match.group(1)
@@ -22,7 +23,12 @@ def scan_charge_controller():
         raise Exception("Didn't find the device - please check if it's connected and please check the device ID")
 
     command = "sudo ./mpptemoncms/mpptemoncms -c mppt_config.conf -d /dev/" + device_id
-    output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, text=True)
+    output_bytes = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
+    
+    try:
+        output = output_bytes.decode('utf-8')
+    except UnicodeDecodeError:
+        output = output_bytes.decode('latin-1')  # Use 'latin-1' as a more permissive encoding
 
     marker = "GET /input/post.json"
     json_start = output.find(marker)
@@ -34,7 +40,6 @@ def scan_charge_controller():
         json_data = re.sub(r'(\w+):', r'"\1":', json_data)
     
         parsed_json = json.loads(json_data)
-
 
         # Extract data into a more descriptive dictionary with formatting
         data = {
@@ -50,10 +55,12 @@ def scan_charge_controller():
             "charger_status": parsed_json.get("cs")
         }
 
+
         return data
     else:
         print("JSON data not found in output.")
         return None
+
 
 charge_controller_data = scan_charge_controller()
 """

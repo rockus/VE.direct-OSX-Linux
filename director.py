@@ -58,13 +58,73 @@ def determine_delta():
     return panel_data["panel_power"] - miner_power["miner power"]
 
 
-# set_power_target(miner_ip_address, ssh_username, ssh_password, 100)
-# Set it to true for this to work
-while False:
-    if determine_delta() > 0 and (determine_delta() / get_miner_power(miner_ip_address, miner_port)["panel_power"]) < 0.15:
-        # Ignore increases if they are insignificant, because the miner wastes energy when restarting
-        pass
-    else:
-        set_power_target(miner_ip_address, ssh_username, ssh_password, get_miner_power(miner_ip_address, miner_port)["miner power"] + determine_delta())
-    wait_time_seconds = 10 * 60  # Convert 10 minutes to seconds
+def check_voltage():
+    panel_data = scan_charge_controller()
+    battery_voltage_str = panel_data["battery_voltage"]
+    try:
+        battery_voltage = float(battery_voltage_str)
+        return battery_voltage
+    except ValueError:
+        print("Error converting battery voltage to numeric value:", battery_voltage_str)
+        return 0.0  # Return a default value (you can adjust this as needed)
+
+
+
+def on_in_a_loop():
+    # set_power_target(miner_ip_address, ssh_username, ssh_password, 100)
+    # Set it to true for this to work
+    while check_voltage() > 13:
+    
+        if determine_delta() > 0 and (determine_delta() / get_miner_power(miner_ip_address, miner_port)["panel_power"]) < 0.15:
+            # Ignore increases if they are insignificant, because the miner wastes energy when restarting
+            pass
+        else:
+            set_power_target(miner_ip_address, ssh_username, ssh_password, get_miner_power(miner_ip_address, miner_port)["miner power"] + determine_delta())
+    # wait_time_seconds = 10 * 60  # Convert 10 minutes to seconds
+    wait_time_seconds = 60
+    time.sleep(wait_time_seconds)
+
+
+def off_in_a_loop():
+    first = True
+
+    while check_voltage() < 12:
+        if check_running(miner_ip_address, ssh_username, ssh_password) and first:
+            print("Voltage < 12 V. Turning off the miner")
+            stop_miner(miner_ip_address, ssh_username, ssh_password)
+
+        if check_running(miner_ip_address, ssh_username, ssh_password) and first:
+            print("The miner is on again even thought eh voltage is still < 12 V!")
+            print("Turning off the miner")
+            stop_miner(miner_ip_address, ssh_username, ssh_password)
+
+            
+def run_minimal_in_a_loop():
+    # set_power_target(miner_ip_address, ssh_username, ssh_password, 100)
+    # Set it to true for this to work
+    while 12 < check_voltage() and check_voltage() < 13:
+        if check_running():
+            miner_stats = get_miner_power(miner_ip_address, miner_port)
+            if miner_stats != None:
+                miner_power_consumption = miner_stats["miner power"]
+            else:
+                raise Exception("Weird: The miner is running, but no stats...")
+        else:
+            print("The miner is already off, lets wait for 13 Volt before starting")
+        
+        if miner_power_consumption > 160:
+            set_power_target(miner_ip_address, ssh_username, ssh_password, 100)
+            # wait_time_seconds = 10 * 60  # Convert 10 minutes to seconds
+            wait_time_seconds = 60
+            time.sleep(wait_time_seconds)
+
+
+while True:
+    print("Battery voltage: ", check_voltage())
+    print("Miner running status: ", check_running(miner_ip_address, ssh_username, ssh_password))
+    print(scan_charge_controller())
+    off_in_a_loop()
+    run_minimal_in_a_loop()
+    on_in_a_loop()
+    wait_time_seconds = 1
     time.sleep(wait_time_seconds)

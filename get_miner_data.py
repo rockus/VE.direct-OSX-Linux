@@ -1,3 +1,4 @@
+from execute_ssh_command import check_running
 from execute_ssh_command import restart
 import subprocess
 import json
@@ -49,7 +50,7 @@ def is_miner_fully_booted(ip_address, port):
     return False
 
 
-def get_miner_power(ip_address, port, depth = 0):
+def get_miner_power(ip_address, port, depth=0):
     json_output = get_json_output(ip_address, port, command={"command": "tunerstatus"})
     if json_output:
         try:
@@ -67,11 +68,18 @@ def get_miner_power(ip_address, port, depth = 0):
             # Read SSH credentials from ssh_config.json
             with open('ssh_config.json') as config_file:
                 ssh_config = json.load(config_file)
-                miner_ip_address = ssh_config['miner_ip_address']
+                ip_address = ssh_config['miner_ip_address']
                 ssh_username = ssh_config['ssh_username']
                 ssh_password = ssh_config['ssh_password']
 
-            restart(miner_ip_address, ssh_username, ssh_password)
+            if check_running(ip_address, ssh_username, ssh_password):
+                print("The miner is running, and we still got this error. Weird...")
+            else:
+                print("The miner is not running")
+                
+            """
+
+            restart(ip_address, ssh_username, ssh_password)
 
             if depth > 0:
                 return None
@@ -79,3 +87,7 @@ def get_miner_power(ip_address, port, depth = 0):
             if is_miner_fully_booted(ip_address, port):
                 return get_miner_power(ip_address, port, depth = depth + 1)
             
+            # Your error handling logic here
+            # For example, you can return None or raise a custom exception
+            """
+            return None  # Returning None to indicate failure

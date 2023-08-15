@@ -1,3 +1,27 @@
+import subprocess
+
+"""
+def check_paramiko_installed():
+    try:
+        subprocess.run(["pip3", "show", "paramiko"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+def install_paramiko():
+    if not check_paramiko_installed():
+        try:
+            subprocess.run(["pip3", "install", "paramiko"], check=True)
+            print("paramiko installed successfully.")
+        except subprocess.CalledProcessError as e:
+            print("Error installing paramiko:", e)
+    else:
+        print("paramiko is already installed.")
+
+# Call the function to install paramiko if needed
+install_paramiko()
+"""
+
 import paramiko
 import json
 
