@@ -58,7 +58,9 @@ def determine_delta():
     return panel_data["panel_power"] - miner_power["miner power"]
 
 
-while True:
+# set_power_target(miner_ip_address, ssh_username, ssh_password, 100)
+# Set it to true for this to work
+while False:
     if determine_delta() > 0 and (determine_delta() / get_miner_power(miner_ip_address, miner_port)["panel_power"]) < 0.15:
         # Ignore increases if they are insignificant, because the miner wastes energy when restarting
         pass

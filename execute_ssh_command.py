@@ -63,7 +63,7 @@ def stop_miner(ip_address, ssh_username, ssh_password):
         ssh_client.close()
 
 
-def check_running(miner_ip_address, ssh_username, ssh_client):
+def check_running(miner_ip_address, ssh_username, ssh_password):
     ssh_client = paramiko.SSHClient()
     ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
