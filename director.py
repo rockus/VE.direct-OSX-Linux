@@ -8,7 +8,6 @@ from get_miner_data import start_miner
 from get_miner_data import check_running
 from get_miner_data import print_output
 from get_miner_data import get_json_output
-
 import time
 import json
 import os
@@ -35,7 +34,7 @@ with open('ssh_config.json') as config_file:
 
 
 def ensure_running(miner_ip_address, ssh_username, ssh_password):
-    if not check_running(miner_ip_address, ssh_username, ssh_password):
+    if not check_running(miner_ip_address, miner_port):
         start_miner(miner_ip_address, ssh_username, ssh_password)
 
 def set_power_target(miner_ip_address, ssh_username, ssh_password, power_target = 152):
@@ -65,7 +64,7 @@ def set_power_target(miner_ip_address, ssh_username, ssh_password, power_target 
 def determine_delta():
 
     panel_data = scan_charge_controller()
-    if check_running(miner_ip_address, ssh_username, ssh_password):
+    if check_running(miner_ip_address, miner_port):
         miner_power = get_miner_power(miner_ip_address, miner_port)
 
         print("Miner Data:", miner_power)
@@ -113,7 +112,7 @@ def on():
     # set_power_target(miner_ip_address, ssh_username, ssh_password, 100)
     # Set it to true for this to work
     if check_voltage() > 13:
-        isrunning = check_running(miner_ip_address, ssh_username, ssh_password)
+        isrunning = check_running(miner_ip_address, miner_port)
         if isrunning:
             miner_power = get_miner_power(miner_ip_address, miner_port)["panel_power"]
             small_delta = (determine_delta() / miner_power) < 0.15
@@ -124,13 +123,13 @@ def on():
             # Ignore increases if they are insignificant, because the miner wastes energy when restarting
             print("Not increasing the miners settings because delta is small")
         else:
-            if check_running(miner_ip_address, ssh_username, ssh_password):
+            if check_running(miner_ip_address, miner_port):
                 new_power = get_miner_power(miner_ip_address, miner_port)["miner power"] + determine_delta()
             else:
                 new_power = determine_delta()
                 
             ensure_running(miner_ip_address, ssh_username, ssh_password)
-            while not check_running(miner_ip_address, ssh_username, ssh_password):
+            while not check_running(miner_ip_address, miner_port):
                 print("Waiting for the miner to start")
                 time.sleep(5)
             print("Changing miner power to ", new_power)
@@ -146,11 +145,11 @@ def off():
     first = True
 
     if check_voltage() < 12:
-        if check_running(miner_ip_address, ssh_username, ssh_password) and first:
+        if check_running(miner_ip_address, miner_port) and first:
             print("Voltage < 12 V. Turning off the miner")
             stop_miner(miner_ip_address, ssh_username, ssh_password)
 
-        if check_running(miner_ip_address, ssh_username, ssh_password) and first:
+        if check_running(miner_ip_address, miner_port) and first:
             print("The miner is on again even thought eh voltage is still < 12 V!")
             print("Turning off the miner")
             stop_miner(miner_ip_address, ssh_username, ssh_password)
@@ -161,7 +160,7 @@ def run_minimal():
     # Set it to true for this to work
 
     if 12 < check_voltage() and check_voltage() < 13:
-        if check_running(miner_ip_address, ssh_username, ssh_password):
+        if check_running(miner_ip_address, miner_port):
             miner_stats = get_miner_power(miner_ip_address, miner_port)
             if miner_stats != None:
                 miner_power_consumption = miner_stats["miner power"]
@@ -180,17 +179,30 @@ def run_minimal():
         
 """
 print("Battery voltage: ", check_voltage())
-print("Miner running status: ", check_running(miner_ip_address, ssh_username, ssh_password))
+print("Miner running status: ", check_running(miner_ip_address, miner_port))
 print(scan_charge_controller())
 run_minimal()
 on()
 off()
 """
 
+print("current state:: ", check_running(miner_ip_address, miner_port))
+print("turn on")
+start_miner(miner_ip_address)
+print("current state:: ", check_running(miner_ip_address, miner_port))
+print("turn off")
+stop_miner(miner_ip_address, ssh_username, ssh_password)
+print("current state:: ", check_running(miner_ip_address, miner_port))
 
-# print("determine delta: ", determine_delta())
-#print("get_json_output, ", get_json_output(miner_ip_address, miner_port, {"command": "pools"}))
-print("check_running: ", check_running(miner_ip_address, miner_port))
+print("current state:: ", check_running(miner_ip_address, miner_port))
+print("turn on")
+start_miner(miner_ip_address)
+print("current state:: ", check_running(miner_ip_address, miner_port))
+print("turn off")
+stop_miner(miner_ip_address, ssh_username, ssh_password)
+print("current state:: ", check_running(miner_ip_address, miner_port))
+
+
 
 
 # Remove the lock file when the script is done

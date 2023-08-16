@@ -1,9 +1,10 @@
+import requests
 import paramiko
 import json
 import subprocess
-import json
-import paramiko
 import time
+#from get_miner_data import get_miner_power
+#from get_pannel_data import 
 
 
 def get_json_output(ip_address, port, command):
@@ -47,9 +48,6 @@ def install_paramiko():
 # Call the function to install paramiko if needed
 install_paramiko()
 """
-
-import paramiko
-import json
 
 def load_ssh_config():
     with open("ssh_config.json", "r") as config_file:
@@ -95,18 +93,29 @@ def stop_miner(ip_address, ssh_username, ssh_password):
 
 
 def check_running(ip_address, port):
-    command = {"command": "summary"}  # Use the appropriate JSON command to check miner status
-    output = get_json_output(ip_address, port, command)
+    max_attempts = 10
+    current_attempt = 0
+    sleep_duration = 5  # in seconds
 
-    print("output1, ", output)
-    print("output2, ", get_json_output(ip_address, port, {"command": "pools"}))
+    while current_attempt < max_attempts:
+        command = {"command": "summary"}  # Use the appropriate JSON command to check miner status
+        output = get_json_output(ip_address, port, command)
 
-    if output:
-        status_list = output.get("STATUS", [])
-        for status_entry in status_list:
-            if "STATUS" in status_entry and status_entry["STATUS"] == "S":
-                return True  # Miner is running
-    return False  # Miner is not running
+        # print("Attempt", current_attempt + 1)
+        if output:
+            status_list = output.get("STATUS", [])
+            for status_entry in status_list:
+                if "STATUS" in status_entry and status_entry["STATUS"] == "S":
+                    return True  # Miner is running
+
+        current_attempt += 1
+        if current_attempt < max_attempts:
+            # print("Retrying in", sleep_duration, "seconds...")
+            time.sleep(sleep_duration)
+
+    # If no valid output is obtained after max_attempts, raise an exception
+    # raise Exception("Miner is not running after multiple attempts")
+    return False
  
 
 def start_miner(miner_ip_address, ssh_username, ssh_password):
@@ -148,9 +157,6 @@ def install_paramiko():
 # Call the function to install paramiko if needed
 install_paramiko()
 """
-
-import paramiko
-import json
 
 def load_ssh_config():
     with open("ssh_config.json", "r") as config_file:
@@ -261,7 +267,7 @@ def get_miner_power(ip_address, port, depth=0):
                 ssh_username = ssh_config['ssh_username']
                 ssh_password = ssh_config['ssh_password']
 
-            if check_running(ip_address, ssh_username, ssh_password):
+            if check_running(ip_address, port):
                 print("The miner is running, and we still got this error. Weird...")
             else:
                 print("The miner is not running")
@@ -281,10 +287,6 @@ def get_miner_power(ip_address, port, depth=0):
             """
             return None  # Returning None to indicate failure
 
-
-#from get_miner_data import get_miner_power
-#from get_pannel_data import 
-import subprocess
 
 """
 def check_paramiko_installed():
@@ -371,17 +373,19 @@ def stop_miner(ip_address, ssh_username, ssh_password):
         ssh_client.close()
 
 
-def start_miner(miner_ip_address, ssh_username, ssh_password):
-    ssh_client = paramiko.SSHClient()
-    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+def start_miner(miner_ip_address):
+    api_url = f"http://{miner_ip_address}:4028"
+    command = {"command": "startminer"}  # Use the appropriate JSON command to start the miner service
+    
     try:
-        ssh_client.connect(miner_ip_address, username=ssh_username, password=ssh_password)
-        ssh_command = "systemctl start bosminer"  # Start the miner service
-        stdin, stdout, stderr = ssh_client.exec_command(ssh_command)
-        print_output(stdout.read().decode("utf-8"))
-    except paramiko.AuthenticationException as auth_ex:
-        print("Authentication error:", auth_ex)
-    except paramiko.SSHException as ssh_ex:
-        print("SSH connection error:", ssh_ex)
-    finally:
-        ssh_client.close()
+        response = requests.post(api_url, json=command)
+        response_data = response.json()
+        
+        if response_data.get("STATUS", []) and response_data["STATUS"][0].get("STATUS") == "S":
+            print("Miner service started successfully")
+        else:
+            print("Failed to start miner service")
+            print("Response:", response_data)
+    except requests.exceptions.RequestException as e:
+        print("Error:", e)
+
