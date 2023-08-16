@@ -62,8 +62,8 @@ def get_miner_power(ip_address, port, depth=0):
             }
             return power
         except KeyError as e:
-            print("KeyError:", e)
-            print("JSON Output:", json_output)  # Print the content of the JSON output for debugging
+            # print("KeyError:", e)
+            # print("JSON Output:", json_output)  # Print the content of the JSON output for debuggingf
 
             # Read SSH credentials from ssh_config.json
             with open('ssh_config.json') as config_file:

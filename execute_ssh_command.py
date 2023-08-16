@@ -94,6 +94,7 @@ def check_running(miner_ip_address, ssh_username, ssh_password):
         ssh_client.connect(miner_ip_address, username=ssh_username, password=ssh_password)
         ssh_command = "systemctl is-active bosminer"  # Check if the miner service is active
         stdin, stdout, stderr = ssh_client.exec_command(ssh_command)
+        print("Running status: ", stdout.read().decode("utf-8").strip())
         return stdout.read().decode("utf-8").strip() == "active"
     except paramiko.AuthenticationException as auth_ex:
         print("Authentication error:", auth_ex)

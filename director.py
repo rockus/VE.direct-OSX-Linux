@@ -9,6 +9,18 @@ from execute_ssh_command import check_running
 from execute_ssh_command import print_output
 import time
 import json
+import os
+
+
+# Check if the lock file exists
+lock_file_path = "/tmp/director.lock"
+if os.path.exists(lock_file_path):
+    print("Script is already running. Exiting.")
+    exit(0)
+
+# Create the lock file
+with open(lock_file_path, "w") as lock_file:
+    lock_file.write(str(os.getpid()))
 
 
 # Read SSH credentials from ssh_config.json
@@ -49,13 +61,18 @@ def set_power_target(miner_ip_address, ssh_username, ssh_password, power_target 
 
 # set_power_target(152)
 def determine_delta():
-    miner_power = get_miner_power(miner_ip_address, miner_port)
+
     panel_data = scan_charge_controller()
+    if check_running(miner_ip_address, ssh_username, ssh_password):
+        miner_power = get_miner_power(miner_ip_address, miner_port)
 
-    print("Miner Data:", miner_power)
-    print("Pannel Data:", panel_data)
+        print("Miner Data:", miner_power)
+        print("Pannel Data:", panel_data)
 
-    return panel_data["panel_power"] - miner_power["miner power"]
+        return panel_data["panel_power"] - miner_power["miner power"]
+    else:
+        print("Pannel Data:", panel_data)
+        return panel_data["panel_power"]
 
 
 def check_voltage():
@@ -68,27 +85,65 @@ def check_voltage():
         print("Error converting battery voltage to numeric value:", battery_voltage_str)
         return 0.0  # Return a default value (you can adjust this as needed)
 
+def show_progress_bar(wait_time_seconds):
+    # Initialize the progress bar variables
+    progress = 0
+    progress_bar_length = 30
+
+    print("Let's give the miner some time to stabilize its fan speed before we change things again:")
+    sys.stdout.write("[{}]".format(" " * progress_bar_length))
+    sys.stdout.flush()
+
+    # Split the wait time into smaller intervals for updating the progress bar
+    interval = wait_time_seconds / progress_bar_length
+
+    # Loop through the intervals and update the progress bar
+    for _ in range(progress_bar_length):
+        time.sleep(interval)
+        progress += 1
+        sys.stdout.write("\r[{}{}]".format("=" * progress, " " * (progress_bar_length - progress)))
+        sys.stdout.flush()
+
+    print("\nStabilization time complete.")
 
 
-def on_in_a_loop():
+def on():
     # set_power_target(miner_ip_address, ssh_username, ssh_password, 100)
     # Set it to true for this to work
-    while check_voltage() > 13:
-    
-        if determine_delta() > 0 and (determine_delta() / get_miner_power(miner_ip_address, miner_port)["panel_power"]) < 0.15:
-            # Ignore increases if they are insignificant, because the miner wastes energy when restarting
-            pass
+    if check_voltage() > 13:
+        isrunning = check_running(miner_ip_address, ssh_username, ssh_password)
+        if isrunning:
+            miner_power = get_miner_power(miner_ip_address, miner_port)["panel_power"]
+            small_delta = (determine_delta() / miner_power) < 0.15
         else:
-            set_power_target(miner_ip_address, ssh_username, ssh_password, get_miner_power(miner_ip_address, miner_port)["miner power"] + determine_delta())
-    # wait_time_seconds = 10 * 60  # Convert 10 minutes to seconds
-    wait_time_seconds = 60
-    time.sleep(wait_time_seconds)
+            small_delta = (determine_delta() / 152) < 0.15
+
+        if determine_delta() > 0 and small_delta:
+            # Ignore increases if they are insignificant, because the miner wastes energy when restarting
+            print("Not increasing the miners settings because delta is small")
+        else:
+            if check_running(miner_ip_address, ssh_username, ssh_password):
+                new_power = get_miner_power(miner_ip_address, miner_port)["miner power"] + determine_delta()
+            else:
+                new_power = determine_delta()
+                
+            ensure_running(miner_ip_address, ssh_username, ssh_password)
+            while not check_running(miner_ip_address, ssh_username, ssh_password):
+                print("Waiting for the miner to start")
+                time.sleep(5)
+            print("Changing miner power to ", new_power)
+            set_power_target(miner_ip_address, ssh_username, ssh_password, new_power)
+
+            # wait_time_seconds = 10 * 60  # Convert 10 minutes to seconds
+            print("Lets give the miner some time to stabilize its can speed before we chage things again")
+            wait_time_seconds = 60 * 3
+            show_progress_bar(wait_time_seconds)
 
 
-def off_in_a_loop():
+def off():
     first = True
 
-    while check_voltage() < 12:
+    if check_voltage() < 12:
         if check_running(miner_ip_address, ssh_username, ssh_password) and first:
             print("Voltage < 12 V. Turning off the miner")
             stop_miner(miner_ip_address, ssh_username, ssh_password)
@@ -99,32 +154,35 @@ def off_in_a_loop():
             stop_miner(miner_ip_address, ssh_username, ssh_password)
 
             
-def run_minimal_in_a_loop():
+def run_minimal():
     # set_power_target(miner_ip_address, ssh_username, ssh_password, 100)
     # Set it to true for this to work
-    while 12 < check_voltage() and check_voltage() < 13:
-        if check_running():
+
+    if 12 < check_voltage() and check_voltage() < 13:
+        if check_running(miner_ip_address, ssh_username, ssh_password):
             miner_stats = get_miner_power(miner_ip_address, miner_port)
             if miner_stats != None:
                 miner_power_consumption = miner_stats["miner power"]
+
+                if miner_power_consumption > 160:
+                    set_power_target(miner_ip_address, ssh_username, ssh_password, 100)
             else:
                 raise Exception("Weird: The miner is running, but no stats...")
         else:
             print("The miner is already off, lets wait for 13 Volt before starting")
         
-        if miner_power_consumption > 160:
-            set_power_target(miner_ip_address, ssh_username, ssh_password, 100)
-            # wait_time_seconds = 10 * 60  # Convert 10 minutes to seconds
-            wait_time_seconds = 60
-            time.sleep(wait_time_seconds)
+        # wait_time_seconds = 10 * 60  # Convert 10 minutes to seconds
+        # wait_time_seconds = 60
+        # time.sleep(wait_time_seconds)
+
+print("Battery voltage: ", check_voltage())
+print("Miner running status: ", check_running(miner_ip_address, ssh_username, ssh_password))
+print(scan_charge_controller())
+run_minimal()
+on()
+off()
 
 
-while True:
-    print("Battery voltage: ", check_voltage())
-    print("Miner running status: ", check_running(miner_ip_address, ssh_username, ssh_password))
-    print(scan_charge_controller())
-    off_in_a_loop()
-    run_minimal_in_a_loop()
-    on_in_a_loop()
-    wait_time_seconds = 1
-    time.sleep(wait_time_seconds)
+# Remove the lock file when the script is done
+os.remove(lock_file_path)
+
