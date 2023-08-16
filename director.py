@@ -1,12 +1,14 @@
 from get_miner_data import get_miner_power
 from get_pannel_data import scan_charge_controller
-from execute_ssh_command import execute_ssh_command
-from execute_ssh_command import restart
-from execute_ssh_command import load_ssh_config
-from execute_ssh_command import stop_miner
-from execute_ssh_command import start_miner
-from execute_ssh_command import check_running
-from execute_ssh_command import print_output
+from get_miner_data import execute_ssh_command
+from get_miner_data import restart
+from get_miner_data import load_ssh_config
+from get_miner_data import stop_miner
+from get_miner_data import start_miner
+from get_miner_data import check_running
+from get_miner_data import print_output
+from get_miner_data import get_json_output
+
 import time
 import json
 import os
@@ -175,12 +177,20 @@ def run_minimal():
         # wait_time_seconds = 60
         # time.sleep(wait_time_seconds)
 
+        
+"""
 print("Battery voltage: ", check_voltage())
 print("Miner running status: ", check_running(miner_ip_address, ssh_username, ssh_password))
 print(scan_charge_controller())
 run_minimal()
 on()
 off()
+"""
+
+
+# print("determine delta: ", determine_delta())
+#print("get_json_output, ", get_json_output(miner_ip_address, miner_port, {"command": "pools"}))
+print("check_running: ", check_running(miner_ip_address, miner_port))
 
 
 # Remove the lock file when the script is done
