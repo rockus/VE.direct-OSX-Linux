@@ -191,7 +191,7 @@ print("turn on")
 start_miner(miner_ip_address)
 print("current state:: ", check_running(miner_ip_address, miner_port))
 print("turn off")
-stop_miner(miner_ip_address, ssh_username, ssh_password)
+stop_miner(miner_ip_address)
 print("current state:: ", check_running(miner_ip_address, miner_port))
 
 print("current state:: ", check_running(miner_ip_address, miner_port))
@@ -199,7 +199,7 @@ print("turn on")
 start_miner(miner_ip_address)
 print("current state:: ", check_running(miner_ip_address, miner_port))
 print("turn off")
-stop_miner(miner_ip_address, ssh_username, ssh_password)
+stop_miner(miner_ip_address)
 print("current state:: ", check_running(miner_ip_address, miner_port))
 
 

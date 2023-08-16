@@ -4,7 +4,6 @@ import json
 import subprocess
 import time
 #from get_miner_data import get_miner_power
-#from get_pannel_data import 
 
 
 def get_json_output(ip_address, port, command):
@@ -118,23 +117,6 @@ def check_running(ip_address, port):
     return False
  
 
-def start_miner(miner_ip_address, ssh_username, ssh_password):
-    ssh_client = paramiko.SSHClient()
-    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    try:
-        ssh_client.connect(miner_ip_address, username=ssh_username, password=ssh_password)
-        ssh_command = "systemctl start bosminer"  # Start the miner service
-        stdin, stdout, stderr = ssh_client.exec_command(ssh_command)
-        print_output(stdout.read().decode("utf-8"))
-    except paramiko.AuthenticationException as auth_ex:
-        print("Authentication error:", auth_ex)
-    except paramiko.SSHException as ssh_ex:
-        print("SSH connection error:", ssh_ex)
-    finally:
-        ssh_client.close()
-#from get_miner_data import get_miner_power
-#from get_pannel_data import 
-import subprocess
 
 """
 def check_paramiko_installed():
@@ -201,21 +183,28 @@ def stop_miner(ip_address, ssh_username, ssh_password):
     finally:
         ssh_client.close()
 
+# curl 'http://151.216.205.165/graphql' -X POST -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/116.0' -H 'Accept: */*' -H 'Accept-Language: en' -H 'Accept-Encoding: gzip, deflate' -H 'content-type: application/json' -H 'Origin: http://151.216.205.165' -H 'Connection: keep-alive' -H 'Referer: http://151.216.205.165/' -H 'Cookie: session_id=ab29f38a41d1c6649ef004cfb935596d' --data-raw '{"query":"mutation {\n  bosminer {\n    start {\n      ... on BosminerError {\n        message\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n","variables":{}}'
+# {"data":{"bosminer":{"__typename":"BosminerMutation","start":{"__typename":"VoidResult"}}}}
 
-def start_miner(miner_ip_address, ssh_username, ssh_password):
-    ssh_client = paramiko.SSHClient()
-    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+def start_miner(miner_ip_address):
+    curl_command = (
+        f"curl 'http://{miner_ip_address}/graphql' -X POST "
+        "-H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/116.0' "
+        "-H 'Accept: */*' -H 'Accept-Language: en' -H 'Accept-Encoding: gzip, deflate' "
+        "-H 'content-type: application/json' "
+        f"-H 'Origin: http://{miner_ip_address}' "
+        "-H 'Connection: keep-alive' "
+        f"-H 'Referer: http://{miner_ip_address}/' "
+        "-H 'Cookie: session_id=ab29f38a41d1c6649ef004cfb935596d' "
+        "--data-raw '{\"query\":\"mutation {\\n  bosminer {\\n    start {\\n      ... on BosminerError {\\n        message\\n        __typename\\n      }\\n      __typename\\n    }\\n    __typename\\n  }\\n}\\n\",\"variables\":{}}'"
+    )
+
     try:
-        ssh_client.connect(miner_ip_address, username=ssh_username, password=ssh_password)
-        ssh_command = "systemctl start bosminer"  # Start the miner service
-        stdin, stdout, stderr = ssh_client.exec_command(ssh_command)
-        print_output(stdout.read().decode("utf-8"))
-    except paramiko.AuthenticationException as auth_ex:
-        print("Authentication error:", auth_ex)
-    except paramiko.SSHException as ssh_ex:
-        print("SSH connection error:", ssh_ex)
-    finally:
-        ssh_client.close()
+        result = subprocess.run(curl_command, shell=True, capture_output=True, text=True)
+        print("Curl Output:", result.stdout)
+    except Exception as e:
+        print("Error:", e)
 
    
 def is_miner_fully_booted(ip_address, port):
@@ -357,35 +346,22 @@ def restart(ip_address, ssh_username, ssh_password):
         print("Error restarting miner:", e)
 
 
-def stop_miner(ip_address, ssh_username, ssh_password):
-    ssh_client = paramiko.SSHClient()
-    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    try:
-        ssh_client.connect(ip_address, username=ssh_username, password=ssh_password)
-        ssh_command = "systemctl stop bosminer"  # Stop the miner service
-        stdin, stdout, stderr = ssh_client.exec_command(ssh_command)
-        print_output(stdout.read().decode("utf-8"))
-    except paramiko.AuthenticationException as auth_ex:
-        print("Authentication error:", auth_ex)
-    except paramiko.SSHException as ssh_ex:
-        print("SSH connection error:", ssh_ex)
-    finally:
-        ssh_client.close()
+def stop_miner(miner_ip_address):
+    curl_command = (
+        f"curl 'http://{miner_ip_address}/graphql' -X POST "
+        "-H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/116.0' "
+        "-H 'Accept: */*' -H 'Accept-Language: en' -H 'Accept-Encoding: gzip, deflate' "
+        "-H 'content-type: application/json' "
+        f"-H 'Origin: http://{miner_ip_address}' "
+        "-H 'Connection: keep-alive' "
+        f"-H 'Referer: http://{miner_ip_address}/' "
+        "-H 'Cookie: session_id=ab29f38a41d1c6649ef004cfb935596d' "
+        "--data-raw '{\"query\":\"mutation {\\n  bosminer {\\n    stop {\\n      ... on VoidResult {\\n        void\\n        __typename\\n      }\\n      ... on BosminerError {\\n        message\\n        __typename\\n      }\\n      __typename\\n    }\\n    __typename\\n  }\\n}\\n\",\"variables\":{}}'"
+    )
 
-
-def start_miner(miner_ip_address):
-    api_url = f"http://{miner_ip_address}:4028"
-    command = {"command": "startminer"}  # Use the appropriate JSON command to start the miner service
-    
     try:
-        response = requests.post(api_url, json=command)
-        response_data = response.json()
-        
-        if response_data.get("STATUS", []) and response_data["STATUS"][0].get("STATUS") == "S":
-            print("Miner service started successfully")
-        else:
-            print("Failed to start miner service")
-            print("Response:", response_data)
-    except requests.exceptions.RequestException as e:
+        result = subprocess.run(curl_command, shell=True, capture_output=True, text=True)
+        print("Curl Output:", result.stdout)
+    except Exception as e:
         print("Error:", e)
 
