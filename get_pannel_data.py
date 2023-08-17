@@ -31,21 +31,22 @@ def find_tty_usb_device_id_dmesg():
     command = "sudo dmesg | grep tty"
     output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, text=True)
 
-    print("output: ", output)
+    # Adjusted pattern to match either "attached to" or "disconnected from"
+    pattern = r"usb \d-\d+\.\d+:\sFTDI USB Serial Device converter (now attached to|now disconnected from) (ttyUSB\d+)"
+    matches = re.findall(pattern, output)
     
-    # pattern = r"usb \d-\d:\sFTDI USB Serial Device converter now attached to (tty\w+)"
-    pattern = r"usb \d-\d+\.\d+:\sFTDI USB Serial Device converter now attached to (tty\w+)"
-    match = re.search(pattern, output)
-    
-    if match:
-        device_id = match.group(1)
-        print("device_id: ", device_id)
-        return device_id
+    if matches:
+        attached_devices = [device_id for action, device_id in matches if action == "now attached to"]
+        if attached_devices:
+            device_id = attached_devices[-1]  # Take the last attached device (most recent)
+            return device_id
+        else:
+            print("No USB devices attached.")
+            return None
     else:
-        print("Error running dmesg:", e.output)
+        print("USB device not found in dmesg output.")
         return None
 
-    
 
 def find_tty_usb_device_id():
     """
