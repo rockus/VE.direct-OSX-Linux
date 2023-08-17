@@ -13,29 +13,9 @@ import json
 import os
 
 
-# Check if the lock file exists
-lock_file_path = "/tmp/director.lock"
-if os.path.exists(lock_file_path):
-    print("Script is already running. Exiting.")
-    exit(0)
-
-# Create the lock file
-with open(lock_file_path, "w") as lock_file:
-    lock_file.write(str(os.getpid()))
-
-
-# Read SSH credentials from ssh_config.json
-with open('ssh_config.json') as config_file:
-    ssh_config = json.load(config_file)
-    miner_ip_address = ssh_config['miner_ip_address']
-    ssh_username = ssh_config['ssh_username']
-    ssh_password = ssh_config['ssh_password']
-    miner_port = ssh_config['miner_port']
-
-
-def ensure_running(miner_ip_address, ssh_username, ssh_password):
+def ensure_running(miner_ip_address):
     if not check_running(miner_ip_address, miner_port):
-        start_miner(miner_ip_address, ssh_username, ssh_password)
+        start_miner(miner_ip_address)
 
 def set_power_target(miner_ip_address, ssh_username, ssh_password, power_target = 152):
 
@@ -48,7 +28,7 @@ def set_power_target(miner_ip_address, ssh_username, ssh_password, power_target 
         stop_miner(miner_ip_address, ssh_username, ssh_password)
 
     if power_target >= minimum_power and power_target <= maximum_power:
-        ensure_running(miner_ip_address, ssh_username, ssh_password)
+        ensure_running(miner_ip_address)
 
 
     # SSH command
@@ -128,7 +108,7 @@ def on():
             else:
                 new_power = determine_delta()
                 
-            ensure_running(miner_ip_address, ssh_username, ssh_password)
+            ensure_running(miner_ip_address)
             while not check_running(miner_ip_address, miner_port):
                 print("Waiting for the miner to start")
                 time.sleep(5)
@@ -176,34 +156,37 @@ def run_minimal():
         # wait_time_seconds = 60
         # time.sleep(wait_time_seconds)
 
-        
-"""
+
+
+
+# Check if the lock file exists
+lock_file_path = "/tmp/director.lock"
+if os.path.exists(lock_file_path):
+    print("Script is already running. Exiting.")
+    exit(0)
+
+# Create the lock file
+with open(lock_file_path, "w") as lock_file:
+    lock_file.write(str(os.getpid()))
+
+# Read SSH credentials from ssh_config.json
+with open('ssh_config.json') as config_file:
+    ssh_config = json.load(config_file)
+    miner_ip_address = ssh_config['miner_ip_address']
+    ssh_username = ssh_config['ssh_username']
+    ssh_password = ssh_config['ssh_password']
+    miner_port = ssh_config['miner_port']
+
 print("Battery voltage: ", check_voltage())
 print("Miner running status: ", check_running(miner_ip_address, miner_port))
 print(scan_charge_controller())
+
+print("\nstart run_minimal")
 run_minimal()
+print("\nstart on")
 on()
+print("\nstart off")
 off()
-"""
-
-print("current state:: ", check_running(miner_ip_address, miner_port))
-print("turn on")
-start_miner(miner_ip_address)
-print("current state:: ", check_running(miner_ip_address, miner_port))
-print("turn off")
-stop_miner(miner_ip_address)
-print("current state:: ", check_running(miner_ip_address, miner_port))
-
-print("current state:: ", check_running(miner_ip_address, miner_port))
-print("turn on")
-start_miner(miner_ip_address)
-print("current state:: ", check_running(miner_ip_address, miner_port))
-print("turn off")
-stop_miner(miner_ip_address)
-print("current state:: ", check_running(miner_ip_address, miner_port))
-
-
-
 
 # Remove the lock file when the script is done
 os.remove(lock_file_path)
