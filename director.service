@@ -7,8 +7,8 @@ Type=simple
 Restart=always
 RestartSec=1
 User=admin
-WorkingDirectory=/home/admin/projects/02_victron_energy/02_ve_direct_linux/VE.direct-OSX-Linux(setup)
-ExecStart=/usr/bin/python3 /home/admin/projects/02_victron_energy/02_ve_direct_linux/VE.direct-OSX-Linux(setup)/director.py
+WorkingDirectory=/home/admin/projects/02_victron_energy/02_ve_direct_linux/VE.direct-OSX-Linux
+ExecStart=/usr/bin/python3 /home/admin/projects/02_victron_energy/02_ve_direct_linux/VE.direct-OSX-Linux/director.py
 
 [Install]
 WantedBy=default.target

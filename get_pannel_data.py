@@ -30,12 +30,16 @@ def find_tty_usb_device_id_lsusb():
 def find_tty_usb_device_id_dmesg():
     command = "sudo dmesg | grep tty"
     output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT, text=True)
+
+    print("output: ", output)
     
     # pattern = r"usb \d-\d:\sFTDI USB Serial Device converter now attached to (tty\w+)"
     pattern = r"usb \d-\d+\.\d+:\sFTDI USB Serial Device converter now attached to (tty\w+)"
     match = re.search(pattern, output)
+    
     if match:
         device_id = match.group(1)
+        print("device_id: ", device_id)
         return device_id
     else:
         print("Error running dmesg:", e.output)
@@ -110,7 +114,18 @@ def scan_charge_controller():
         return None
 
 
-charge_controller_data = scan_charge_controller()
+def check_voltage(charge_controller):
+    panel_data = charge_controller
+    battery_voltage_str = panel_data["battery_voltage"]
+    try:
+        battery_voltage = float(battery_voltage_str)
+        return battery_voltage
+    except ValueError:
+        print("Error converting battery voltage to numeric value:", battery_voltage_str)
+        return 0.0  # Return a default value (you can adjust this as needed)
+
+
+# charge_controller_data = scan_charge_controller()
 """
 if charge_controller_data:
     print(json.dumps(charge_controller_data, indent=2))

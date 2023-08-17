@@ -91,26 +91,33 @@ def stop_miner(ip_address, ssh_username, ssh_password):
         ssh_client.close()
 
 
+def running_attempt(ip_address, port):
+    command = {"command": "summary"}  # Use the appropriate JSON command to check miner status
+    output = get_json_output(ip_address, port, command)
+
+    # print("Attempt", current_attempt + 1)
+    if output:
+        status_list = output.get("STATUS", [])
+        for status_entry in status_list:
+            if "STATUS" in status_entry and status_entry["STATUS"] == "S":
+                return True  # Miner is running
+
+
 def check_running(ip_address, port):
     max_attempts = 10
     current_attempt = 0
     sleep_duration = 5  # in seconds
 
+    running_attempt(ip_address, port)
+    """
     while current_attempt < max_attempts:
-        command = {"command": "summary"}  # Use the appropriate JSON command to check miner status
-        output = get_json_output(ip_address, port, command)
-
-        # print("Attempt", current_attempt + 1)
-        if output:
-            status_list = output.get("STATUS", [])
-            for status_entry in status_list:
-                if "STATUS" in status_entry and status_entry["STATUS"] == "S":
-                    return True  # Miner is running
+        running_attempt()
 
         current_attempt += 1
         if current_attempt < max_attempts:
             # print("Retrying in", sleep_duration, "seconds...")
             time.sleep(sleep_duration)
+    """
 
     # If no valid output is obtained after max_attempts, raise an exception
     # raise Exception("Miner is not running after multiple attempts")
